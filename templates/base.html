@@ -1,0 +1,45 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}Flasky{% endblock %}
+{% block head %}
+{{ super() }}
+    <!-- link标签定义文档与外部资源的关系。
+    rel 规定当前文档与被链接文档之间的关系 :help, icon, sidebar, tag 等
+    href 	规定被链接文档的位置。
+    type 规定被链接文档的 MIME 类型。
+    -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }} " type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }} " type="image/x-icon">
+{% endblock %}
+{% block navbar %}
+<div class="navbar navbar-inverse" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">Flasky</a>
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="/">Home</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% block page_content %}{% endblock %}
+</div>
+{% endblock %}
+<!--引入Moment.js库-->
+{% block scripts %}
+{{ super() }}
+    {{ moment.include_moment() }}
+    {{ moment.locale('cn') }}
+{% endblock %}

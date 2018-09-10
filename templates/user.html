@@ -1,11 +1,38 @@
-<!DOCTYPE html>
+<!--
+!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>user</title>
-    <h1>Welcome, {{ name}}!</h1>
+    {% include 'common.html' %}
+    <ul>
+        {% for digit in digits -%}
+            <li>{{ digit }}</li>
+        {%- endfor %}
+    </ul>
+    {% if name == 'ulysses' %}
+        <h1>Hello, admin</h1>
+    {% else %}
+       <h1>Welcome, {{ name|title}}!</h1>
+    {% endif %}
+
+    {% import 'macro.html' as macro %}
+    <ul>
+        {% for user in users %}
+            <h2>{{ macro.render_user(user) }}</h2>
+        {% endfor %}
+    </ul>
 </head>
 <body>
 
 </body>
 </html>
+-->
+{% extends 'base.html' %}
+{% block title %}Flasky{% endblock %}
+{% block page_content %}
+<div class="page-header">
+    <h1>Hello, {{ name }}</h1>
+    <p>My Url:{{ url|safe }}</p>
+</div>
+{% endblock %}
