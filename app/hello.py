@@ -7,8 +7,12 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
+from app.gmail import mail_user, mail_passwd
+from flask_mail import Mail, Message
+import os
+import logging
 import pymysql
-
+logging.basicConfig(format='%(asctime)s:%(message)s', level=logging.INFO)
 app = Flask(__name__)
 # 配置flask-wtf 秘钥
 app.config['SECRET_KEY'] = 'secret key'
@@ -17,14 +21,31 @@ DBNAME = 'sql_hello'
 URL = f'mysql+pymysql://root:62300313@localhost:3306/{DBNAME}'
 app.config['SQLALCHEMY_DATABASE_URI'] = URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+app.config['MAIL_SERVER'] = 'smtp.qq.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = '2276777056@qq.com'
+app.config['MAIL_PASSWORD'] = 'vbgymkieqpsjeafg'
+app.config['FLASKY_MAIL_SUBJECT_PREFIX'] = '[Flasky]'
+app.config['FLASKY_MAIL_SENDER'] = '2276777056@qq.com' # 'Flasky Admin <flasky@example.com>'
+app.config['FLASK_ADMIN']='jianliangwu1171@gmail.com'# os.environ.get('FLASK_ADMIN')
 bootstarp = Bootstrap(app)
 moment = Moment(app)
 # flask_sqlalchemy 封装了 sqlalchemy的功能
 db = SQLAlchemy(app)
-
+mail = Mail(app)
 # 数据库中的2个表 映射为 python类
 
 
+def send_email(to, subject, template, **kwargs):
+    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + ' '+subject,
+                  sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template+ '.html', **kwargs)
+    mail.send(msg)
+    
+    
 class User(db.Model):
     #  该表在数据库中的名字
     __tablename__ = 'users'
@@ -86,6 +107,12 @@ def index():
             db.session.add(user)
             db.session.commit()
             session['know'] = False
+            # flask 邮件发送
+            logging.info(f"admin:{app.config['FLASK_ADMIN']}, user: {user}, sender:{mail_user}")
+            if app.config['FLASK_ADMIN']:
+                # 向admin（2276777056@qq.com）发送邮件
+                
+                send_email(app.config['FLASK_ADMIN'], 'New User', 'mail/new_user', user=user)
         else:
             session['know'] = True
         session['name'] = form.name.data
