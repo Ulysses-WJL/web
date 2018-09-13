@@ -9,6 +9,11 @@
     <!-- fromNow()渲染相对时间，会随时间推移而自动刷新显示-->
     <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p>
     <h1>Hello, {% if name %}{{ name }}{% else %}Stranger{% endif %}</h1>
+    {% if not know %}
+    <p>Pleased to meet yuu !</p>
+    {% else %}
+    <p>Happy to see you again!</p>
+    {% endif %}
 </div>
 {{ wtf.quick_form(form) }}
 {% endblock %}

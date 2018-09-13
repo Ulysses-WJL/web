@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add</title>
+</head>
+<body>
+    <form method="POST">
+        role_name:<input type="text" name="role_name"/>
+        <input type="submit" name="add"/>
+    </form>
+{% if roles %}
+<table border="1px">
+    <tr>
+        <th>RoleName</th>
+    </tr>
+    {% for r in roles %}
+        <tr>
+            <td>{{r.role_name}}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endif %}
+</body>
+</html>
