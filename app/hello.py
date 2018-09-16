@@ -7,17 +7,17 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
-from app.gmail import mail_user, mail_passwd
+# from app.gmail import mail_user, mail_passwd
 from flask_mail import Mail, Message
 import os
 import logging
 import pymysql
-logging.basicConfig(format='%(asctime)s:%(message)s', level=logging.INFO)
+# logging.basicConfig(format='%(asctime)s:%(message)s', level=logging.INFO)
 app = Flask(__name__)
 # 配置flask-wtf 秘钥
 app.config['SECRET_KEY'] = 'secret key'
 # 数据库所在url,配置到flask的设置中
-DBNAME = 'sql_hello'
+DBNAME = 'sqltest'
 URL = f'mysql+pymysql://root:62300313@localhost:3306/{DBNAME}'
 app.config['SQLALCHEMY_DATABASE_URI'] = URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
@@ -108,7 +108,7 @@ def index():
             db.session.commit()
             session['know'] = False
             # flask 邮件发送
-            logging.info(f"admin:{app.config['FLASK_ADMIN']}, user: {user}, sender:{mail_user}")
+            logging.info(f"admin:{app.config['FLASK_ADMIN']}, user: {user}, sender:{app.config['MAIL_USERNAME']}")
             if app.config['FLASK_ADMIN']:
                 # 向admin（2276777056@qq.com）发送邮件
                 
@@ -155,4 +155,4 @@ def make_shell_context():
     return dict(db=db, User=User, Role=Role)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8888)
+    app.run(debug=True)
