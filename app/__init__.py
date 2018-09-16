@@ -1,8 +1,34 @@
 from flask import render_template, Flask, url_for, session, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_bootstrap import Bootstrap
+from flask_moment import Moment
+from flask_mail import Mail
+from config import config
 # import pymysql
 
-app = Flask(__name__)
-app.config.from_object('config')
-db = SQLAlchemy(app)
-from app import models,views
+
+bootstrap = Bootstrap()
+mail = Mail()
+moment = Moment()
+db = SQLAlchemy()
+
+def create_app(config_name):
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    config[config_name].init_app(app)
+    
+    bootstrap.init_app(app)
+    mail.init_app(app)
+    moment.init_app(app)
+    db.init_app(app)
+    # 在应用中注册该蓝图
+    from .main import main_bp, role_bp, user_bp
+    app.register_blueprint(main_bp)
+    app.register_blueprint(role_bp)
+    app.register_blueprint(user_bp)
+    
+    return app
+# app = Flask(__name__)
+# app.config.from_object('config')
+# db = SQLAlchemy(app)
+# from . import models,views
