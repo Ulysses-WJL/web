@@ -1,7 +1,7 @@
 from flask import render_template, redirect, session, url_for, current_app, request
 from datetime import datetime
-from . import main_bp, user_bp, role_bp
-from ..models import User, Role
+from . import main_bp
+from ..models import User
 from .forms import NameForm
 from .. import db
 from ..email import send_email
@@ -20,7 +20,8 @@ def index():
         # name = form.name.data # 表单的数据，空则为''
         user = User.query.filter_by(user_name=form.name.data).first()
         if user is None:
-            user = User(user_name=form.name.data, pass_wd='123456')
+            user = User(user_name=form.name.data)
+            user.password = '123456'
             db.session.add(user)
             db.session.commit()
             session['know'] = False
@@ -47,57 +48,3 @@ def index():
         current_time=datetime.utcnow(),
         know=session.get('know', False))
     # 静态文件favicron.ico
-
-
-@role_bp.route('/add/', methods=['GET', 'POST'])
-def add():
-    # 添加user数据
-    if request.method == 'POST':
-        # 没有则为None
-        old_name = session.get('name')
-        p_name = request.form.get('role_name')
-        if p_name is not None and p_name != old_name:
-            role = Role.query.filter_by(role_name=p_name).first()
-            if role is None:
-                # logging.info(f'name:{p_name}')
-                # role_id 主键数据库自动生成
-                newobj = Role(role_name=p_name)
-                
-                db.session.add(newobj)
-                db.session.commit()
-                session['name'] = p_name
-        # roles = Role.query.all()
-        # add界面
-        # 指定一个蓝本名称作为端点的一部分
-        return redirect(url_for('role_bp.add'))
-        
-        # return redirect(url_for('/add/'), roles=roles)
-    roles = Role.query.order_by('role_id')
-    return render_template('role/add.html', roles=roles)
-
-@user_bp.route('/add/', methods=['GET', 'POST'])
-def add():
-    # 添加user数据
-    if request.method == 'POST':
-        # 没有则为None
-        old_name = session.get('name')
-        p_name = request.form.get('user_name', None)
-        p_passwd = request.form.get('user_passwd', None)
-        p_roleid = request.form.get('role_id', None)
-
-        if p_name is not None and p_name != old_name:
-            user = User.query.filter_by(user_name=p_name).first()
-            if user is None:
-                # logging.info(f'name:{p_name}')
-                # role_id 主键数据库自动生成
-                newobj = User(user_name=p_name, pass_wd=p_passwd, role_id=p_roleid)
-        
-                db.session.add(newobj)
-                db.session.commit()
-                session['name'] = p_name
-        # roles = Role.query.all()
-        # add界面
-        # 指定一个蓝本名称作为端点的一部分
-        return redirect(url_for('user_bp.add'))
-    users = User.query.order_by('user_id')
-    return render_template('user/add.html', users=users)

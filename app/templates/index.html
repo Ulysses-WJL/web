@@ -8,7 +8,13 @@
    <p>当地时间: {{moment(current_time).format('LLLL')}}</p>
     <!-- fromNow()渲染相对时间，会随时间推移而自动刷新显示-->
     <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p>
-    <h1>Hello, {% if name %}{{ name }}{% else %}Stranger{% endif %}</h1>
+    <h1>Hello,
+        {% if current_user.is_authenticated %}
+            {{ current_user.username }}
+        {% else %}
+            Stranger
+        {% endif %}
+    </h1>
     {% if not know %}
     <p>Pleased to meet yuu !</p>
     {% else %}
