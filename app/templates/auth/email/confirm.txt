@@ -1,0 +1,6 @@
+{{ user.user_name }}，你好
+欢迎来到 Flasky
+为了验证您的账户，请点击以下链接进行验证
+{{ url_for('auth_bp.confirm', token=token, _extrenal=True) }}
+The Flasky Team
+请勿回复此邮件

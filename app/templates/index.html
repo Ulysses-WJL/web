@@ -10,13 +10,13 @@
     <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p>
     <h1>Hello,
         {% if current_user.is_authenticated %}
-            {{ current_user.username }}
+            {{ current_user.user_name }}
         {% else %}
             Stranger
-        {% endif %}
+        {% endif %}!
     </h1>
     {% if not know %}
-    <p>Pleased to meet yuu !</p>
+    <p>Pleased to meet yuo !</p>
     {% else %}
     <p>Happy to see you again!</p>
     {% endif %}

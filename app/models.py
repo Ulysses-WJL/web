@@ -1,7 +1,9 @@
 from app import db
+from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from . import login_manager
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 
 
 class User(UserMixin, db.Model):
@@ -14,6 +16,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(64), unique=True, index=True)
     user_name = db.Column(db.String(30), unique=True, index=True)
     password_hash = db.Column(db.String(128))
+    confirmed = db.Column(db.Boolean, default=False)
     # role_id 外键， 此列值时role表中的role_id值
     role_id = db.Column(db.Integer, db.ForeignKey('role.role_id'))
     # UserMixin 需要，get_id()
@@ -34,7 +37,24 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    # 生成验证邮箱需要的加密签名
+    def generate_confirmation_token(self, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'confirm':self.id}).decode('utf-8')
+    
+    def confirm(self, token):
+        s = Serializer(current_app.config["SECRET_KEY"])
+        try:
+            data = s.loads(token.encode('utf-8'))
+        except:
+            return False
+        if data.get('confirm') != self.id:
+            return False
+        self.confirmed = True
+        db.session.add(self)
+        return True
 
+       
 class Role(db.Model):
     __tablename__ = 'role'
     role_id = db.Column(db.Integer, primary_key=True)
@@ -55,6 +75,7 @@ reload_user时检测根据传入user_id确定的user是否存在（installed）�
 存在，则为ctx.user
 """
 @login_manager.user_loader
+# 回调函数需要 根据id 返回一个user对象
 def load_user(user_id):
     # 先将传入的字符串转为整数
     return User.query.get(int(user_id))
