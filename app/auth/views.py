@@ -2,7 +2,8 @@ from flask import render_template, redirect, request, url_for, flash
 from . import auth_bp
 from flask_login import login_required, login_user, logout_user, current_user
 from ..models import User
-from .form import LoginForm, RegistrationForm
+from .form import LoginForm, RegistrationForm, \
+    ChangePasswordForm, ChangeUserNameForm, ResetPasswordForm, ForgetPasswordForm
 from .. import db
 from ..email import send_email
 
@@ -19,7 +20,7 @@ def login():
             login_user(user, form.remember_me.data)
             next = request.args.get('next')
             if next is None or not next.startswith('/'):
-                next = url_for('main_bp.index')
+                next = url_for('main_bp.index', _external=True)
             return redirect(next)
         # 密码错误或没有这个user时闪现消息
         flash('密码或邮箱错误')
@@ -32,7 +33,7 @@ def login():
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out')
+    flash('已退出')
     return redirect(url_for('main_bp.index'))
 
 
@@ -70,4 +71,100 @@ def confirm(token):
     else:
         flash('验证未能通过， 链接无效或失去时效')
     # 验证失败或成功，都回到主页面
+    return redirect(url_for('main_bp.index'))
+
+
+@auth_bp.before_app_request
+def before_request():
+    """已登录，但账户未验证，请求的url不在身份验证蓝本中，
+    也不是对静态文件的请求。此条件下，拦截请求，重定向到一个确认账户相关信息的页面"""
+    if current_user.is_authenticated \
+        and not current_user.confirmed \
+        and request.blueprint != 'auth_bp' \
+        and request.endpoint != 'static' :
+        return redirect(url_for('auth_bp.unconfirmed'))
+
+
+# 未验证的需要重新发邮件验证， 验证过的，回到主页面
+@auth_bp.route('/unconfirmed')
+def unconfirmed():
+    if current_user.is_anonymous or current_user.confirmed:
+        return redirect(url_for('main_bp.index'))
+    # 返回未确认页面
+    return render_template('auth/unconfirmed.html')
+
+
+#重新发送验证邮件
+@auth_bp.route('/confirm')
+@login_required
+def resend_confirmation():
+    token = current_user.generate_confirmation_token()
+    send_email(current_user.email, '确认邮箱', 'auth/email/confirm', user=current_user, token=token)
+    flash('已经再次发送验证邮件，请接收')
     return redirect('main_bp.index')
+
+
+@auth_bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if current_user.verify_password(form.password_old.data):
+            current_user.password = form.password_new1.data
+            db.session.add(current_user)
+            db.session.commit()
+            flash('已修改密码，请重新登录')
+            logout_user()
+            return redirect(url_for('main_bp.index'))
+        else:
+            flash('修改密码失败，请确认原密码是否正确')
+    return render_template('auth/change_password.html', form=form)
+
+
+@auth_bp.route('/change-username', methods=['GET', 'POST'])
+@login_required
+def change_username():
+    form = ChangeUserNameForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(user_name=form.username_new.data).first()
+        if user is None:
+            current_user.user_name = form.username_new.data
+            db.session.add(current_user)
+            db.session.commit()
+            flash('已修改用户名')
+            return redirect(url_for('main_bp.index'))
+        else:
+            flash('此用户名已存在')
+    return render_template('auth/change_name.html' ,form=form)
+
+
+@auth_bp.route('/reset/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if not current_user.is_anonymous:
+        return redirect(url_for('main_bp.index'))
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        if User.reset_password(token, form.password.data):
+            db.session.commit()
+            flash('密码已重置，请重新登录')
+            return redirect(url_for('auth_bp.login'))
+        else:
+            flash('发生错误，密码未重置')
+            return redirect(url_for('main_bp.index'))
+    return render_template('auth/resetpassword.html', form=form)
+
+
+@auth_bp.route('/reset', methods=['GET', 'POST'])
+def forget_password():
+    # 表示匿名用户的特殊用户对象，返回True ，普通用户False
+    if not current_user.is_anonymous:
+        return redirect(url_for('main_bp.index'))
+    form = ForgetPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user is not None and user.user_name == form.username.data:
+            token = user.generate_password_token()
+            send_email(user.email, '重置密码', 'auth/email/forget', user=user, token=token)
+            flash('已发送重置链接到指定邮箱， 请注意查收')
+            return redirect(url_for('auth_bp.login'))
+    return render_template('auth/forgetpassword.html', form=form)

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="cn">
+<head>
+    <meta charset="UTF-8">
+    <title>忘记密码</title>
+</head>
+<body>
+    <h1>{{ user.user_name }}, 你好！</h1>
+    <p>请<a href="{{ url_for('auth_bp.reset_password', token=token, _external=True) }}">点击</a>重置密码</p>
+    <p>或在浏览器内手动输入以下网址：</p>
+    <p>{{ url_for('auth_bp.reset_password', token=token, _external=True) }}</p>
+    <p>The Flasky Team</p>
+    <p><small>请勿回复此邮件</small></p>
+</body>
+</html>

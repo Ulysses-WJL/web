@@ -10,7 +10,10 @@
     {{ wtf.quick_form(form) }}
     <br/>
     <p>
-        没有账号?<a href="{{ url_for('auth_bp.register') }}">点击注册</a>.
+        没有账号?<a href="{{ url_for('auth_bp.register') }}">点击</a>注册.
+    </p>
+    <p>
+        忘记密码？<a href="{{ url_for('auth_bp.forget_password') }}">点击</a>重置
     </p>
 </div>
 

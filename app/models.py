@@ -12,7 +12,7 @@ class User(UserMixin, db.Model):
     # 结构 primary_key 主键
     # unique 不允许重复
     # index 为列创建索引
-    user_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(64), unique=True, index=True)
     user_name = db.Column(db.String(30), unique=True, index=True)
     password_hash = db.Column(db.String(128))
@@ -20,8 +20,8 @@ class User(UserMixin, db.Model):
     # role_id 外键， 此列值时role表中的role_id值
     role_id = db.Column(db.Integer, db.ForeignKey('role.role_id'))
     # UserMixin 需要，get_id()
-    id = user_id
-    
+
+
     def __repr__(self):
         return f'<User {self.user_name}>'
 
@@ -40,8 +40,9 @@ class User(UserMixin, db.Model):
     # 生成验证邮箱需要的加密签名
     def generate_confirmation_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        # dumps生成的是b‘’字节码， 解码为字符串形式 传入url
         return s.dumps({'confirm':self.id}).decode('utf-8')
-    
+
     def confirm(self, token):
         s = Serializer(current_app.config["SECRET_KEY"])
         try:
@@ -53,8 +54,28 @@ class User(UserMixin, db.Model):
         self.confirmed = True
         db.session.add(self)
         return True
+    
+    def generate_password_token(self, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'reset': self.id}).decode("utf-8")
+    
+    # 邮件链接处理重置密码，没有用户登录
+    @staticmethod
+    def reset_password(token, new_password):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token.encode('utf-8'))
+        except:
+            return False
+        # 在数据库中查找 id 符合的用户对象
+        user = User.query.get(data.get('reset'))
+        if user is None:
+            return False
+        user.password = new_password
+        db.session.add(user)
+        return True
 
-       
+
 class Role(db.Model):
     __tablename__ = 'role'
     role_id = db.Column(db.Integer, primary_key=True)
