@@ -2,8 +2,8 @@ from flask import render_template, redirect, request, url_for, flash
 from . import auth_bp
 from flask_login import login_required, login_user, logout_user, current_user
 from ..models import User
-from .form import LoginForm, RegistrationForm, \
-    ChangePasswordForm, ChangeUserNameForm, ResetPasswordForm, ForgetPasswordForm
+from .form import LoginForm, RegistrationForm, ChangePasswordForm, ChangeUserNameForm,\
+    ResetPasswordForm, ForgetPasswordForm, ChangeEmailForm
 from .. import db
 from ..email import send_email
 
@@ -168,3 +168,32 @@ def forget_password():
             flash('已发送重置链接到指定邮箱， 请注意查收')
             return redirect(url_for('auth_bp.login'))
     return render_template('auth/forgetpassword.html', form=form)
+
+
+@auth_bp.route('/change-email', methods=['GET', 'POST'])
+@login_required
+def change_email_request():
+    form = ChangeEmailForm()
+    new_email = form.email.data
+    if form.validate_on_submit():
+        if current_user.verify_password(form.password.data):
+            try:
+                form.validate_email(form.email)
+            except:
+                return False
+            token = current_user.generate_change_email_token(new_email)
+            send_email(new_email, "更换邮箱", 'auth/email/change_email', user=current_user, token=token)
+            flash('已发送确认链接到新邮箱，请查收')
+            return redirect(url_for('main_bp.index'))
+    return render_template('auth/change_email.html', form=form)
+
+
+@auth_bp.route('/change-email/<token>')
+@login_required
+def change_email_confirm(token):
+    if current_user.confirm_new_email(token):
+        db.session.commit()
+        flash(f'邮箱已替换为{current_user.email}')
+    else:
+        flash('邮箱替换失败')
+    return redirect(url_for('main_bp.index'))

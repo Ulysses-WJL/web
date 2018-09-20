@@ -1,9 +1,19 @@
 from app import db
 from flask import current_app
-from flask_login import UserMixin
+from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+
+
+# 自定义的匿名用户
+# 无论登录着的用户，还是匿名用户都可以使用current_user.can(), .is_administrator()
+class AnonymousUser(AnonymousUserMixin):
+    def can(self, permissions):
+        return False
+    
+    def is_administrator(self):
+        return False
 
 
 class User(UserMixin, db.Model):
@@ -18,10 +28,27 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     confirmed = db.Column(db.Boolean, default=False)
     # role_id 外键， 此列值时role表中的role_id值
-    role_id = db.Column(db.Integer, db.ForeignKey('role.role_id'))
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
     # UserMixin 需要，get_id()
 
-
+    # 赋予角色属性
+    def __init__(self, **kwargs):
+        super(User, self).__init__(**kwargs)
+        if self.role is None:
+            # 使用admin邮箱注册的user 赋予其admin角色的权限
+            if self.email == current_app.config['FLASK_ADMIN']:
+                self.role = Role.query.filter_by(name='Administrator').first()
+            # 不是admin邮箱 账户，默认设置其为普通User用户, Role中default字段为True的
+            if self.role is None:
+                self.role = Role.query.filter_by(default=True).first()
+    
+    # 检验用户是否具有某种权限
+    def can(self, perm):
+        return self.role is not None and  self.role.has_permission(perm)
+    
+    def is_administrator(self):
+        return self.can(Permission.ADMIN)
+        
     def __repr__(self):
         return f'<User {self.user_name}>'
 
@@ -59,6 +86,26 @@ class User(UserMixin, db.Model):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'reset': self.id}).decode("utf-8")
     
+    # 加密令牌包括用户id信息和新邮件信息
+    def generate_change_email_token(self, new_email,expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'change_email':self.id, 'new_email': new_email}).decode('utf-8')
+    
+    # 查看token内指定的id是否为当前user，是则修改email
+    def confirm_new_email(self, token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token.encode('utf-8'))
+        except:
+            return False
+        if data.get('change_email') != self.id:
+            return False
+        
+        self.email = data.get('new_email')
+        db.session.add(self)
+        return True
+    
+    
     # 邮件链接处理重置密码，没有用户登录
     @staticmethod
     def reset_password(token, new_password):
@@ -76,11 +123,24 @@ class User(UserMixin, db.Model):
         return True
 
 
+# 权限
+class Permission:
+    FOLLOW = 1
+    COMMENT = 2
+    WRITE = 4
+    MODERATE = 8
+    ADMIN = 16
+
+
+
 class Role(db.Model):
     __tablename__ = 'role'
-    role_id = db.Column(db.Integer, primary_key=True)
-    role_name = db.Column(db.String(20), unique=True, index=True)
-    role_level = db.Column(db.Integer)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20), unique=True, index=True)
+    # 默认角色，用户注册时赋予用户的角色，只有一个为True，其余为FALSE
+    default_role = db.Column(db.Boolean, default=False, index=True)
+    # 设置权限
+    permissions = db.Column(db.Integer)
     # 关系选项 ‘一’的那端使用relationship,
     # backref在User模型中添加role属性，定义反向关系,可以通过这个属性获取对应Role模型对象
     # 不在通过role_id外键
@@ -89,8 +149,54 @@ class Role(db.Model):
     # role_1.users 返回使用role_1的user对象列表
     def __repr__(self):
         return f'<Role {self.role_name}>'
-
-
+    
+    # 未设置的字段，sqlalchemy会默认设置为None (NULL)
+    def __init__(self, **kwargs):
+        super(Role, self).__init__(**kwargs)
+        if self.permissions is None:
+            self.permissions = 0
+    
+    # 管理角色权限
+    def has_permission(self, perm):
+        return self.permissions & perm == perm
+        
+    def add_permission(self, perm):
+        if not self.has_permission(perm):
+            self.permissions += perm
+    
+    def remove_permission(self, perm):
+        if self.has_permission(perm):
+            self.permissions -= perm
+    
+    def reset_permission(self):
+        self.permissions = 0
+    
+    # 3种角色 user， moderate， admin
+    @staticmethod
+    def insert_roles():
+        roles = {
+            'User' : [Permission.FOLLOW, Permission.COMMENT, Permission.WRITE],
+            'Moderate' : [Permission.FOLLOW, Permission.COMMENT,
+                          Permission.WRITE, Permission.MODERATE],
+            'Administrator' : [Permission.FOLLOW, Permission.COMMENT,
+                       Permission.WRITE, Permission.MODERATE, Permission.ADMIN]
+        }
+        default_role = "User"
+        for r in roles:
+            role = Role.query.filter_by(name=r).first()
+            # Role 表中没有对应的3中角色，则添加
+            if role is None:
+                role = Role(name=r)
+                role.reset_permission()
+                # 为重置权限后的role添加对应的权限
+                # r-> key    [...]->value
+                for perm in roles[r]:
+                    role.add_permission(perm)
+                # 默认角色 是user
+                role.default = (default_role == role.name)
+            db.session.add(role)
+        db.session.commit()
+    
 """将注册函数load_user传入给flask_login（load_user->self.user_callback）
 reload_user时检测根据传入user_id确定的user是否存在（installed），不存在则抛出异常
 存在，则为ctx.user
