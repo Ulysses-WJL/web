@@ -100,8 +100,13 @@ class User(UserMixin, db.Model):
             return False
         if data.get('change_email') != self.id:
             return False
-        
-        self.email = data.get('new_email')
+        new_email = data.get('new_email')
+        if new_email is None:
+            return False
+        # new_email 是被注册过的邮箱，
+        if self.query.filter_by(email=new_email).first() is not None:
+            return False
+        self.email = new_email
         db.session.add(self)
         return True
     
@@ -138,7 +143,7 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), unique=True, index=True)
     # 默认角色，用户注册时赋予用户的角色，只有一个为True，其余为FALSE
-    default_role = db.Column(db.Boolean, default=False, index=True)
+    default = db.Column(db.Boolean, default=False, index=True)
     # 设置权限
     permissions = db.Column(db.Integer)
     # 关系选项 ‘一’的那端使用relationship,
@@ -190,10 +195,10 @@ class Role(db.Model):
                 role.reset_permission()
                 # 为重置权限后的role添加对应的权限
                 # r-> key    [...]->value
-                for perm in roles[r]:
-                    role.add_permission(perm)
-                # 默认角色 是user
-                role.default = (default_role == role.name)
+            for perm in roles[r]:
+                role.add_permission(perm)
+            # 默认角色 是user
+            role.default = (default_role == role.name)
             db.session.add(role)
         db.session.commit()
     

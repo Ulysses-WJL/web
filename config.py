@@ -23,6 +23,7 @@ class Config:
 #   开发环境
 class DevelopmentConfig(Config):
     DEBUG = True
+    TESTING = False
     DBNAME = 'sql_hello'
     URL = f'mysql+pymysql://{root}:{passwd}@localhost:3306/{DBNAME}'
     SQLALCHEMY_DATABASE_URI = URL
@@ -30,7 +31,7 @@ class DevelopmentConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     DBNAME = 'sql_test'
-    URL =  f'mysql+pymysql://{root}:{passwd}@localhost:3306/{DBNAME}'
+    URL =  f'mysql+pymysql://{root}:{passwd}@localhost:3306/sql_test'
     SQLALCHEMY_DATABASE_URI = URL
 
 

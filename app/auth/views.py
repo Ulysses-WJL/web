@@ -178,6 +178,7 @@ def change_email_request():
     if form.validate_on_submit():
         if current_user.verify_password(form.password.data):
             try:
+                # 修改的邮箱是否已经被注册过
                 form.validate_email(form.email)
             except:
                 return False
