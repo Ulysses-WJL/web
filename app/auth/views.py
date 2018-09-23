@@ -26,9 +26,9 @@ def login():
         flash('密码或邮箱错误')
     return render_template('auth/login.html', form=form)
 
+
+
 # login_required 保护路由
-
-
 @auth_bp.route('/logout')
 @login_required
 def logout():
@@ -78,11 +78,13 @@ def confirm(token):
 def before_request():
     """已登录，但账户未验证，请求的url不在身份验证蓝本中，
     也不是对静态文件的请求。此条件下，拦截请求，重定向到一个确认账户相关信息的页面"""
-    if current_user.is_authenticated \
-        and not current_user.confirmed \
-        and request.blueprint != 'auth_bp' \
-        and request.endpoint != 'static' :
-        return redirect(url_for('auth_bp.unconfirmed'))
+    if current_user.is_authenticated:
+        # 每次请求前执行刷新访问时间
+        current_user.ping()
+        if not current_user.confirmed \
+            and request.blueprint != 'auth_bp' \
+            and request.endpoint != 'static' :
+            return redirect(url_for('auth_bp.unconfirmed'))
 
 
 # 未验证的需要重新发邮件验证， 验证过的，回到主页面
@@ -198,3 +200,4 @@ def change_email_confirm(token):
     else:
         flash('邮箱替换失败')
     return redirect(url_for('main_bp.index'))
+

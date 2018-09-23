@@ -4,7 +4,7 @@ from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-
+from datetime import datetime
 
 # 自定义的匿名用户
 # 无论登录着的用户，还是匿名用户都可以使用current_user.can(), .is_administrator()
@@ -22,14 +22,24 @@ class User(UserMixin, db.Model):
     # 结构 primary_key 主键
     # unique 不允许重复
     # index 为列创建索引
+    # UserMixin 需要，get_id()
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     email = db.Column(db.String(64), unique=True, index=True)
     user_name = db.Column(db.String(30), unique=True, index=True)
     password_hash = db.Column(db.String(128))
     confirmed = db.Column(db.Boolean, default=False)
+    
+    # 增加一些额外信息，地址、注册日期、最近访问日期、个人信息
+    location = db.Column(db.String(64))
+    # default可以接受python callable对象
+    name = db.Column(db.String(64))
+    member_since = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    about_me = db.Column(db.Text())
+    
     # role_id 外键， 此列值时role表中的role_id值
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
-    # UserMixin 需要，get_id()
+    
 
     # 赋予角色属性
     def __init__(self, **kwargs):
@@ -51,6 +61,13 @@ class User(UserMixin, db.Model):
         
     def __repr__(self):
         return f'<User {self.user_name}>'
+
+    # 每次都会更新访问时间
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
+        db.session.commit()
+
 
     @property
     def password(self):
