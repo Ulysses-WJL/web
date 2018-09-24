@@ -1,5 +1,6 @@
+import hashlib
 from app import db
-from flask import current_app
+from flask import current_app,request
 from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from . import login_manager
@@ -14,7 +15,8 @@ class AnonymousUser(AnonymousUserMixin):
     
     def is_administrator(self):
         return False
-
+# 自定义匿名用戶
+login_manager.anonymous_user = AnonymousUser
 
 class User(UserMixin, db.Model):
     #  该表在数据库中的名字
@@ -37,9 +39,12 @@ class User(UserMixin, db.Model):
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     about_me = db.Column(db.Text())
     
+    avatar_hash = db.Column(db.String(32))
     # role_id 外键， 此列值时role表中的role_id值
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
     
+    # 在Post类 中反向添加author属性, 一个author多篇文章
+    posts = db.relationship('Post', backref='author', lazy="dynamic")
 
     # 赋予角色属性
     def __init__(self, **kwargs):
@@ -51,6 +56,9 @@ class User(UserMixin, db.Model):
             # 不是admin邮箱 账户，默认设置其为普通User用户, Role中default字段为True的
             if self.role is None:
                 self.role = Role.query.filter_by(default=True).first()
+        
+        if self.email is not None and self.avatar_hash is None:
+            self.avatar_hash = self.gravatar_hash()
     
     # 检验用户是否具有某种权限
     def can(self, perm):
@@ -124,6 +132,7 @@ class User(UserMixin, db.Model):
         if self.query.filter_by(email=new_email).first() is not None:
             return False
         self.email = new_email
+        self.avatar_hash = self.gravatar_hash()
         db.session.add(self)
         return True
     
@@ -143,6 +152,21 @@ class User(UserMixin, db.Model):
         user.password = new_password
         db.session.add(user)
         return True
+    
+    # 使用https://en.gravatar.com/gravatar 生成用户头像
+    # size大小， d：没有注册gravatar服务的用户默认图片， r图像级别
+    def gravatar(self, size=100, default='identicon', rating='g'):
+        if request.is_secure:
+            url = "https://secure.gravatar.com/avatar"
+        else:
+            url = 'http://www.gravatar.com/avatar'
+        # avatar的hash值 存在时使用存储中（数据库），不存在则新生成一个
+        hash = self.avatar_hash or  self.gravatar_hash()
+        return f'{url}/{hash}?s={size}&d={default}&r={rating}'
+    
+    # 生成avatar的hash值
+    def gravatar_hash(self):
+        return hashlib.md5(self.email.lower().encode('utf-8')).hexdigest()
 
 
 # 权限
@@ -228,3 +252,12 @@ reload_user时检测根据传入user_id确定的user是否存在（installed）�
 def load_user(user_id):
     # 先将传入的字符串转为整数
     return User.query.get(int(user_id))
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    
+    

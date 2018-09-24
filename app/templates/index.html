@@ -4,10 +4,6 @@
 
 {% block page_content %}
 <div class="page-header">
-    <h1>导航</h1>
-   <p>当地时间: {{moment(current_time).format('LLLL')}}</p>
-    <!-- fromNow()渲染相对时间，会随时间推移而自动刷新显示-->
-    <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p>
     <h1>Hello,
         {% if current_user.is_authenticated %}
             {{ current_user.user_name }}
@@ -15,11 +11,12 @@
             Stranger
         {% endif %}!
     </h1>
-    {% if not know %}
-    <p>Pleased to meet you!</p>
-    {% else %}
-    <p>Happy to see you again!</p>
+</div>
+<div>
+    {% if current_user.can(Permission.WRITE) %}
+    {{ wtf.quick_form(form) }}
     {% endif %}
 </div>
-{{ wtf.quick_form(form) }}
+<h3>Posts by {{ user.user_name }}</h3>
+{% include "posts.html" %}
 {% endblock %}
