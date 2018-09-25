@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Length, Regexp, Email, ValidationError
 from ..models import Role, User
+from flask_pagedown.fields import PageDownField
 # 表单类
 
 class NameForm(FlaskForm):
@@ -62,5 +63,8 @@ class EditProfileAdminForm(FlaskForm):
             raise  ValidationError('此用户名已被注册')
 
 class PostForm(FlaskForm):
-    body = TextAreaField('what you want to say:', validators=[DataRequired()])
+    
+    # body = TextAreaField('what you want to say:', validators=[DataRequired()])
+    # 使用PageDownField支持富文本
+    body = PageDownField('有何高见', validators=[DataRequired()])
     submit = SubmitField('确认')

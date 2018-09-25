@@ -5,6 +5,7 @@ from flask_moment import Moment
 from flask_mail import Mail
 from config import config
 from flask_login import LoginManager
+from flask_pagedown import PageDown
 # import pymysql
 
 
@@ -19,6 +20,8 @@ login_manager = LoginManager()
 #: machinery is external to your application.)
 #: 设置登录界面的端点
 login_manager.login_view = 'auth_bp.login'
+# 使用PageDownField之前要初始化扩展
+pagedown = PageDown()
 
 def create_app(config_name):
     app = Flask(__name__)
@@ -30,6 +33,7 @@ def create_app(config_name):
     moment.init_app(app)
     db.init_app(app)
     login_manager.init_app(app)
+    pagedown.init_app(app)
     # 在应用中注册该蓝图
     from .main import main_bp
     from .auth import auth_bp

@@ -6,6 +6,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from datetime import datetime
+from markdown import markdown
+import bleach
 
 # 自定义的匿名用户
 # 无论登录着的用户，还是匿名用户都可以使用current_user.can(), .is_administrator()
@@ -253,11 +255,30 @@ def load_user(user_id):
     # 先将传入的字符串转为整数
     return User.query.get(int(user_id))
 
+
 class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
+    # markdown格式文本转html，缓存
+    body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     
-    
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tag = ['a', 'abbr', 'acronym', 'b', 'blockquote','code', 'em',
+                     'i', 'li', 'ol', 'pre', 'strong', 'ul', 'h1', 'h2',
+                     'h3', 'p']
+        # bleach.linkify: 将url字符串转为html<a>链接
+        # bleach.clean 清除html片段中的恶意内容，并返回，tags：允许存在的标签 strip：是否去除不允许的元素
+        # markdown 将markdown型式的字符串转为html, output_format :输出格式xhtml（默认）、html
+        target.body_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tag, strip=True))
+
+
+# “set”事件监听程序，在body字段设置新的值时，自动调用on_changed_body
+# sqlalchemy.event.listen(target, identifier, fn, *args, **kw)
+# a string identifier which identifies the event to be intercepted
+db.event.listen(Post.body, 'set', Post.on_changed_body)

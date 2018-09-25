@@ -1,33 +1,4 @@
-<!--
-!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>user</title>
-    {% include 'common.html' %}
-    <ul>
-        {% for digit in digits -%}
-            <li>{{ digit }}</li>
-        {%- endfor %}
-    </ul>
-    {% if name == 'ulysses' %}
-        <h1>Hello, admin</h1>
-    {% else %}
-       <h1>Welcome, {{ name|title}}!</h1>
-    {% endif %}
 
-    {% import 'macro.html' as macro %}
-    <ul>
-        {% for user in users %}
-            <h2>{{ macro.render_user(user) }}</h2>
-        {% endfor %}
-    </ul>
-</head>
-<body>
-
-</body>
-</html>
--->
 {% extends 'base.html' %}
 {% block title %}Flasky-个人信息{% endblock %}
 {% block page_content %}
@@ -67,5 +38,5 @@
     </div>
 </div>
 <h3>Posts by {{ user.user_name }}</h3>
-{% include 'posts.html' %}
+{% include '_posts.html' %}
 {% endblock %}

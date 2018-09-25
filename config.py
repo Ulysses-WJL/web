@@ -16,6 +16,7 @@ class Config:
     FLASKY_MAIL_SENDER = '2276777056@qq.com'
     FLASK_ADMIN = os.environ.get("FLASK_ADMIN") or 'jianliangwu1171@gmail.com'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    FLASK_POSTS_PER_PAGE = 25
     
     @staticmethod
     def init_app(app):

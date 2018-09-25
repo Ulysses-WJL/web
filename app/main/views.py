@@ -1,8 +1,10 @@
-from flask import render_template, redirect, url_for, abort
+from flask import render_template, redirect,\
+    url_for, abort,flash, request, current_app
 from datetime import datetime
 from . import main_bp
 from ..models import User, Permission, Post, AnonymousUser
-from .forms import NameForm, EditProfileForm, EditProfileAdminForm, PostForm
+from .forms import NameForm, EditProfileForm,\
+    EditProfileAdminForm, PostForm
 from .. import db
 from ..email import send_email
 import logging
@@ -17,14 +19,20 @@ def index():
     form = PostForm()
     if current_user.can(Permission.WRITE) and form.validate_on_submit():
         # 创建一个post时传入user实例对象，方便操作
-        
         post = Post(body=form.body.data, author=current_user._get_current_object())
         db.session.add(post)
         db.session.commit()
         return redirect(url_for('.index'))
     # 将所有的文章按时间降序排列
-    posts = Post.query.order_by(Post.timestamp.desc()).all()
-    return render_template('index.html', form=form, posts=posts)
+    # posts = Post.query.order_by(Post.timestamp.desc()).all()
+    # 从url中获取参数 ？page=1， 默认获取第一页，获取的数据为int型
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.query.order_by(Post.timestamp.desc()).paginate(
+        page, per_page=current_app.config['FLASK_POSTS_PER_PAGE'],
+        error_out=False)
+    posts = pagination.items
+    return render_template('index.html', form=form, posts=posts,
+                           pagination=pagination)
 
 # def index():
 #     # name = None
@@ -72,7 +80,7 @@ def user(username):
     if user is None:
         abort(404)
     # 在user信息内显示自己发布的blog信息
-    posts = user.posts.order_by(Post.timestamp).all()
+    posts = user.posts.order_by(Post.timestamp.desc()).all()
     return render_template('user.html', user=user, posts=posts)
 
 @main_bp.route('/edit-profile', methods=['GET', 'POST'])
@@ -123,3 +131,29 @@ def edit_profile_admin(id):
     form.location.data = user.location
     form.about_me.data = user.about_me
     return render_template('edit_profile.html', form=form,user=user)
+
+# 为blog提供固定的链接
+@main_bp.route('/post/<int:id>')
+def post(id):
+    post = Post.query.get_or_404(id)
+    return render_template('post.html', posts=[post])
+
+# 在post下点击edit 进入编辑
+@main_bp.route('/edit/<int:id>', methods=['GET', "POST"])
+@login_required
+def edit_post(id):
+    # 获取当前post对象
+    post = Post.query.get_or_404(id)
+    # 不是管理员修改，也不是当前post所有者在修改
+    if current_user != post.author and\
+        not current_user.can(Permission.ADMIN):
+            abort(403)
+    form = PostForm()
+    if form.validate_on_submit():
+        post.body = form.body.data
+        db.session.add(post)
+        db.session.commit()
+        flash("已修改post")
+        return redirect(url_for('.edit_post', id=post.id))
+    form.body.data = post.body
+    return  render_template('edit_post.html', form=form)
