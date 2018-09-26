@@ -1,7 +1,8 @@
 import unittest
-from app.models import User, Permission, Role, AnonymousUser
+from app.models import User, Permission, Follow, Role, AnonymousUser
 import time
 from app import db, create_app
+from datetime import datetime
 
 
 class UserModelTest(unittest.TestCase):
@@ -139,6 +140,7 @@ class UserModelTest(unittest.TestCase):
         self.assertTrue(u1.can(Permission.MODERATE))
         self.assertTrue(u1.can(Permission.ADMIN))
 
+    # 匿名用户属性
     def test_anonymous_role(self):
         u = AnonymousUser()
         self.assertFalse(u.can(Permission.FOLLOW))
@@ -146,3 +148,91 @@ class UserModelTest(unittest.TestCase):
         self.assertFalse(u.can(Permission.WRITE))
         self.assertFalse(u.can(Permission.MODERATE))
         self.assertFalse(u.can(Permission.ADMIN))
+    
+    # last-seen
+    def test_user_last_seen(self):
+        u = User(password='cat')
+        db.session.add(u)
+        db.session.commit()
+        now = datetime.utcnow()
+        print(f'now:{now}\n'
+              f'member_since:{u.member_since}')
+        self.assertTrue(
+            (datetime.utcnow() - u.member_since).total_seconds() < 3)
+        self.assertTrue(
+            (datetime.utcnow() - u.last_seen).total_seconds() < 3)
+        
+    # 访问时间
+    def test_ping(self):
+        u = User(password='cat')
+        db.session.add(u)
+        db.session.commit()
+        time.sleep(3)
+        last_seen_before = u.last_seen
+        u.ping()
+        self.assertTrue(u.last_seen > last_seen_before)
+    
+    # 测试avatar头像生成
+    def test_gravatar(self):
+        u = User(password='123', email='avatar@test.com')
+        with self.app.test_request_context('/'):
+            gravatar = u.gravatar()
+            gravatar_128 = u.gravatar(size=128)
+            gravatar_pg = u.gravatar(rating='pg')
+            gravatar_retro = u.gravatar(default='retro')
+            # print(f"hash:{gravatar}")
+            # print(f"hash:{u.avatar_hash}")
+            self.assertTrue('http://www.gravatar.com/avatar/' +
+                            'd648ea7ebc8127250f7ad525f35dac3f' in gravatar)
+            self.assertTrue('s=128' in gravatar_128)
+            self.assertTrue('r=pg' in gravatar_pg)
+            self.assertTrue('d=retro' in gravatar_retro)
+    
+    # 关注功能
+    def test_follow(self):
+        u1 = User(password='123', email='u1@test.com')
+        u2 = User(password='123', email='u2@test.com')
+        db.session.add_all([u1, u2])
+        db.session.commit()
+        self.assertFalse(u1.is_followed_by(u2))
+        self.assertFalse(u1.is_following(u2))
+        timestamp_before = datetime.utcnow()
+        print(f'time_before:{timestamp_before}\n')
+        # u1关注u2
+        u1.follow(u2)
+        db.session.add(u1)
+        db.session.commit()
+        timestamp_after = datetime.utcnow()
+        print(f'time_after:{timestamp_after}\n')
+        # 关注 正确
+        self.assertTrue(u1.is_following(u2))
+        self.assertTrue(u2.is_followed_by(u1))
+        self.assertFalse(u1.is_followed_by(u2))
+        self.assertFalse(u2.is_following(u1))
+        # fans ,idol 属性正确
+        self.assertTrue(u1.idol.count()==1)
+        self.assertTrue(u2.fans.count()==1)
+        
+        # follow 端的fans 和 idol 属性正确性
+        f = u1.idol.all()[-1]
+        self.assertTrue(f.idol == u2)
+        print(f'time:{f.timestamp}\n')
+        self.assertTrue(timestamp_before <= f.timestamp )
+        f = u2.fans.all()[-1]
+        self.assertTrue(f.fans == u1)
+        
+        # 取消关注
+        u1.unfollow(u2)
+        db.session.add(u1)
+        db.session.commit()
+        self.assertTrue(u1.idol.count() == 0)
+        self.assertTrue(u2.fans.count() == 0)
+        self.assertTrue(Follow.query.count() == 0)
+        
+        # 对象被删除时，Follow表中对应记录要被删除
+        u2.follow(u1)
+        db.session.add_all([u1, u2])
+        db.session.commit()
+        db.session.delete(u2)
+        db.session.commit()
+        self.assertTrue(Follow.query.count() == 0)

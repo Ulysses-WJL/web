@@ -20,6 +20,18 @@ class AnonymousUser(AnonymousUserMixin):
 # 自定义匿名用戶
 login_manager.anonymous_user = AnonymousUser
 
+
+# 多对多模型，由关系表升级
+class Follow(db.Model):
+    __tablename__ = 'follows'
+    # 关注者 ， 我被谁关注
+    fans_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    # 被关注者,我关注哪一用户
+    # follower_id follow followed_id
+    idol_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class User(UserMixin, db.Model):
     #  该表在数据库中的名字
     __tablename__ = 'users'
@@ -47,6 +59,27 @@ class User(UserMixin, db.Model):
     
     # 在Post类 中反向添加author属性, 一个author多篇文章
     posts = db.relationship('Post', backref='author', lazy="dynamic")
+    
+    # 若b,c 关注 a  则 a.fans 有 b,c
+    # 在follows表中
+    # b.idol, c.idol 有a
+    #  fans_id   idol_id
+    #   b.id       a.id
+    #   c.id       a.id
+    # 我的关注列表，我是xxx的fans Follow.fans 表示哪一位用户要关注其他用户
+    # 回引中lazy="joined",user.idol.all()回返回一个列表，包含所有相应的Follow实例
+    # 一次查询，完成操作
+    idol = db.relationship('Follow', foreign_keys=[Follow.fans_id],
+                             backref=db.backref('fans', lazy='joined'),
+                             lazy='dynamic', cascade='all, delete-orphan')
+    
+    # fans，idol 在“一”的一侧定义，返回“多”的一侧的记录 lazy="dynamic",返回的是查询对象
+    # 我的fans列表 我是xxx的idol Follow.idol 表示被关注的用户
+    # cascade 父对象上的操作对相关对象的影响， 启动所有默认层叠选项， 删除孤儿记录
+    # 删除对象时，默认把对象连接的所有相关对象的外键设为 空， 需求是删除指向该记录的实体
+    fans = db.relationship('Follow', foreign_keys=[Follow.idol_id],
+                             backref=db.backref('idol', lazy='joined'),
+                             lazy='dynamic', cascade='all, delete-orphan')
 
     # 赋予角色属性
     def __init__(self, **kwargs):
@@ -170,7 +203,31 @@ class User(UserMixin, db.Model):
     def gravatar_hash(self):
         return hashlib.md5(self.email.lower().encode('utf-8')).hexdigest()
 
-
+    # 关注某一用户
+    def follow(self, user):
+        if not self.is_following(user):
+            f = Follow(fans=self, idol=user)
+            db.session.add(f)
+    
+    # 取消关注
+    def unfollow(self, user):
+        # User.idol 返回的是查询对象（fans_id=self.id）
+        f = self.idol.filter_by(idol_id=user.id).first()
+        if f:
+            db.session.delete(f)
+    # 是否关注某一对象
+    def is_following(self, user):
+        if user.id is None:
+            return False
+        return self.idol.filter_by(idol_id=user.id).first() is not None
+    
+    # 有无user这个fans
+    def is_followed_by(self, user):
+        if user.id is None:
+            return False
+        return self.fans.filter_by(fans_id=user.id).first() is not None
+        
+    
 # 权限
 class Permission:
     FOLLOW = 1
@@ -264,7 +321,7 @@ class Post(db.Model):
     body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    
+
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
         allowed_tag = ['a', 'abbr', 'acronym', 'b', 'blockquote','code', 'em',
@@ -282,3 +339,6 @@ class Post(db.Model):
 # sqlalchemy.event.listen(target, identifier, fn, *args, **kw)
 # a string identifier which identifies the event to be intercepted
 db.event.listen(Post.body, 'set', Post.on_changed_body)
+
+
+
