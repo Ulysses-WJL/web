@@ -1,5 +1,5 @@
 from flask import render_template, redirect,\
-    url_for, abort,flash, request, current_app
+    url_for, abort,flash, request, current_app, make_response
 from datetime import datetime
 from . import main_bp
 from ..models import User, Permission, Post, AnonymousUser
@@ -9,7 +9,7 @@ from .. import db
 from ..email import send_email
 import logging
 from flask_login import login_required, current_user
-from ..decorators import admin_required
+from ..decorators import admin_required,permission_required
 from ..models import Role, User
 logging.basicConfig(format="%(asctime)s%(message)s", level=logging.INFO)
 
@@ -27,12 +27,21 @@ def index():
     # posts = Post.query.order_by(Post.timestamp.desc()).all()
     # 从url中获取参数 ？page=1， 默认获取第一页，获取的数据为int型
     page = request.args.get('page', 1, type=int)
-    pagination = Post.query.order_by(Post.timestamp.desc()).paginate(
+    # 根据cookies show_follow决定显示所有posts还是关注对象的posts
+    show_followed = False
+    if current_user.is_authenticated:
+        show_followed = bool(request.cookies.get('show_followed', ''))
+    if show_followed :
+        query = current_user.idol_posts
+    else:
+        query = Post.query
+    
+    pagination = query.order_by(Post.timestamp.desc()).paginate(
         page, per_page=current_app.config['FLASK_POSTS_PER_PAGE'],
         error_out=False)
     posts = pagination.items
     return render_template('index.html', form=form, posts=posts,
-                           pagination=pagination)
+                           pagination=pagination, show_followed=show_followed)
 
 # def index():
 #     # name = None
@@ -157,3 +166,94 @@ def edit_post(id):
         return redirect(url_for('.edit_post', id=post.id))
     form.body.data = post.body
     return  render_template('edit_post.html', form=form)
+
+# 关注和取消关注
+@main_bp.route('/follow/<username>')
+@login_required
+@permission_required(Permission.FOLLOW)
+def follow(username):
+    user = User.query.filter_by(user_name=username).first()
+    if user is None:
+        flash('无效用户')
+        return False
+    if current_user.is_following(user):
+        flash("该用户已在您的关注列表！")
+        # 回到之前的该用户个人信息界面
+        return redirect(url_for('.user', username=username))
+    current_user.follow(user)
+    db.session.commit()
+    flash(f"成功关注用户{username}")
+    return redirect(url_for('.user', username=username))
+
+@main_bp.route('/unfollow/<username>')
+@login_required
+@permission_required(Permission.FOLLOW)
+def unfollow(username):
+    user = User.query.filter_by(user_name=username).first()
+    if user is None:
+        flash('无效用户')
+        return False
+    if not current_user.is_following(user):
+        flash("您没有关注此用户！")
+        # 回到之前的该用户个人信息界面
+        return redirect(url_for('.user', username=username))
+    current_user.unfollow(user)
+    db.session.commit()
+    flash(f"取消关注用户{username}")
+    return redirect(url_for('.user', username=username))
+
+# 显示该用户的fans
+@main_bp.route('/followers/<username>')
+def followers(username):
+    user = User.query.filter_by(user_name=username).first()
+    if user is None:
+        flash('无此用户')
+        return redirect(url_for('.index'))
+    # 从url直接获取参数page=页数
+    page = request.args.get('page',1, type=int)
+    pagination = user.fans.paginate(
+        page, per_page=current_app.config['FLASK_FOLLOWERS_PER_PAGE'],
+        error_out=False)
+    # pagination.items 是当期page下所有fans
+    follows = [{'user':item.fans, 'timestamp':item.timestamp}\
+               for item in pagination.items if item.fans != user]
+    return render_template('followers.html', follows=follows,user=user,
+                           titile="Followers of", endpoint='.followers',
+                           pagination=pagination)
+# 显示该用户的关注列表
+@main_bp.route('/followed_by/<username>')
+def followed_by(username):
+    user = User.query.filter_by(user_name=username).first()
+    if user is None:
+        flash('无此用户')
+        return redirect(url_for('.index'))
+    # 从url直接获取参数page=页数
+    page = request.args.get('page',1, type=int)
+    pagination = user.idol.paginate(
+        page, per_page=current_app.config['FLASK_FOLLOWERS_PER_PAGE'],
+        error_out=False)
+    # pagination.items 是当期page下所有fans
+    follows = [{'user':item.idol, 'timestamp':item.timestamp}\
+               for item in pagination.items if item.idol != user]
+    return render_template('followers.html', follows=follows,user=user,
+                           titile="Followed by", endpoint='.followed_by',
+                           pagination=pagination)
+
+@main_bp.route('/all')
+@login_required
+def show_all():
+    # cookie 只能在响应对象中设置
+    # Sometimes it is necessary to set additional headers in a view
+    # 要使用make_response 创建响应对象
+    resp = make_response(redirect(url_for('.index')))
+    resp.set_cookie('show_followed', '', max_age=30*24*60*60)
+    return resp
+
+@main_bp.route('/followed')
+@login_required
+def show_followed():
+    # Sometimes it is necessary to set additional headers in a view
+    resp = make_response(redirect(url_for('.index')))
+    # 设定cookie  （cookie名称，值，过期时间）
+    resp.set_cookie('show_followed', '1', max_age=30*24*60*60)
+    return resp

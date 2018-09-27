@@ -197,37 +197,40 @@ class UserModelTest(unittest.TestCase):
         self.assertFalse(u1.is_followed_by(u2))
         self.assertFalse(u1.is_following(u2))
         timestamp_before = datetime.utcnow()
-        print(f'time_before:{timestamp_before}\n')
+        # print(f'time_before:{timestamp_before}\n')
         # u1关注u2
         u1.follow(u2)
         db.session.add(u1)
         db.session.commit()
         timestamp_after = datetime.utcnow()
-        print(f'time_after:{timestamp_after}\n')
+        # print(f'time_after:{timestamp_after}\n')
         # 关注 正确
         self.assertTrue(u1.is_following(u2))
         self.assertTrue(u2.is_followed_by(u1))
         self.assertFalse(u1.is_followed_by(u2))
         self.assertFalse(u2.is_following(u1))
-        # fans ,idol 属性正确
-        self.assertTrue(u1.idol.count()==1)
-        self.assertTrue(u2.fans.count()==1)
+        # fans ,idol 属性正确,自关注
+        self.assertTrue(u1.idol.count()==2)
+        self.assertTrue(u2.fans.count()==2)
         
         # follow 端的fans 和 idol 属性正确性
-        f = u1.idol.all()[-1]
-        self.assertTrue(f.idol == u2)
-        print(f'time:{f.timestamp}\n')
-        self.assertTrue(timestamp_before <= f.timestamp )
-        f = u2.fans.all()[-1]
-        self.assertTrue(f.fans == u1)
+        f = u1.idol.filter_by(idol=u2).first()
+        # print(f'u1.idol:{u1.idol.all()}')
+        self.assertTrue(u2 == f.idol)
+        # print(f'time:{f.timestamp}\n')
+        # self.assertTrue(timestamp_before <= f.timestamp <= timestamp_after )
+        f = u2.fans.filter_by(fans=u1).first()
+
+        print(f'u2.fans:{f}')
+        self.assertTrue(u1 == f.fans)
         
-        # 取消关注
+        # 取消关注， 自关注
         u1.unfollow(u2)
         db.session.add(u1)
         db.session.commit()
-        self.assertTrue(u1.idol.count() == 0)
-        self.assertTrue(u2.fans.count() == 0)
-        self.assertTrue(Follow.query.count() == 0)
+        self.assertTrue(u1.idol.count() == 1)
+        self.assertTrue(u2.fans.count() == 1)
+        self.assertTrue(Follow.query.count() == 2)
         
         # 对象被删除时，Follow表中对应记录要被删除
         u2.follow(u1)
@@ -235,4 +238,4 @@ class UserModelTest(unittest.TestCase):
         db.session.commit()
         db.session.delete(u2)
         db.session.commit()
-        self.assertTrue(Follow.query.count() == 0)
+        self.assertTrue(Follow.query.count() == 1)

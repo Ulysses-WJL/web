@@ -94,6 +94,16 @@ class User(UserMixin, db.Model):
         
         if self.email is not None and self.avatar_hash is None:
             self.avatar_hash = self.gravatar_hash()
+        self.follow(self)
+    
+    # 新建用户时关注自己
+    @staticmethod
+    def add_self_follows():
+        for user in User.query.all():
+            if not user.is_following(user):
+                user.follow(user)
+                db.session.add(user)
+                db.session.commit()
     
     # 检验用户是否具有某种权限
     def can(self, perm):
@@ -226,7 +236,12 @@ class User(UserMixin, db.Model):
         if user.id is None:
             return False
         return self.fans.filter_by(fans_id=user.id).first() is not None
-        
+    
+    # 获取所有关注对象的posts
+    @property
+    def idol_posts(self):
+        return Post.query.join(Follow, Follow.idol_id == Post.author_id)\
+                .filter(Follow.fans_id == self.id)
     
 # 权限
 class Permission:
