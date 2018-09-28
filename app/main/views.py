@@ -4,13 +4,13 @@ from datetime import datetime
 from . import main_bp
 from ..models import User, Permission, Post, AnonymousUser
 from .forms import NameForm, EditProfileForm,\
-    EditProfileAdminForm, PostForm
+    EditProfileAdminForm, PostForm, CommentForm
 from .. import db
 from ..email import send_email
 import logging
 from flask_login import login_required, current_user
 from ..decorators import admin_required,permission_required
-from ..models import Role, User
+from ..models import Role, User, Comment
 logging.basicConfig(format="%(asctime)s%(message)s", level=logging.INFO)
 
 
@@ -86,11 +86,13 @@ def index():
 @main_bp.route('/user/<username>')
 def user(username):
     user = User.query.filter_by(user_name=username).first_or_404()
-    if user is None:
-        abort(404)
-    # 在user信息内显示自己发布的blog信息
-    posts = user.posts.order_by(Post.timestamp.desc()).all()
-    return render_template('user.html', user=user, posts=posts)
+    page = request.args.get('page', 1, type=int)
+    pagination = user.posts.order_by(Post.timestamp.desc()).paginate(
+        page, per_page=current_app.config['FLASK_POSTS_PER_PAGE'],
+        error_out=False)
+    posts = pagination.items
+    return render_template('user.html', user=user, posts=posts,
+                           pagination=pagination)
 
 @main_bp.route('/edit-profile', methods=['GET', 'POST'])
 @login_required
@@ -135,17 +137,36 @@ def edit_profile_admin(id):
     form.email.data = user.email
     form.user_name.data = user.user_name
     form.confirmed.data = user.confirmed
-    form.role.data = user.role
+    form.role.data = user.role_id
     form.name.data = user.name
     form.location.data = user.location
     form.about_me.data = user.about_me
     return render_template('edit_profile.html', form=form,user=user)
 
 # 为blog提供固定的链接
-@main_bp.route('/post/<int:id>')
+# 添加评论功能
+@main_bp.route('/post/<int:id>', methods=['GET', 'POST'])
 def post(id):
     post = Post.query.get_or_404(id)
-    return render_template('post.html', posts=[post])
+    form = CommentForm()
+    if form.validate_on_submit():
+        # 数据库需要的是真正的user对象，current_user是上下文代理对象，是user的轻度包装
+        comment = Comment(body=form.body.data, post=post,
+                          author=current_user._get_current_object())
+        db.session.add(comment)
+        db.session.commit()
+        flash('评论成功')
+        # 重定向到最后一页评论，显示刚提交的评论
+        return redirect(url_for('.post', id=post.id, page=-1))
+    page = request.args.get('page', 1, type=int)
+    if page == -1:
+        # 计算当前有多少页的评论
+        page = (post.comments.count()-1) // (current_app.config['FLASK_COMMENT_PER_PAGE']) + 1
+    pagination = post.comments.order_by(Comment.timestamp.asc()).\
+        paginate(page, per_page=current_app.config['FLASK_COMMENT_PER_PAGE'], error_out=False)
+    comments = pagination.items
+    return render_template('post.html', posts=[post], form=form,
+                           comments=comments, pagination=pagination)
 
 # 在post下点击edit 进入编辑
 @main_bp.route('/edit/<int:id>', methods=['GET', "POST"])
@@ -257,3 +278,38 @@ def show_followed():
     # 设定cookie  （cookie名称，值，过期时间）
     resp.set_cookie('show_followed', '1', max_age=30*24*60*60)
     return resp
+
+#  管理评论,moderate.html设置是否渲染moderate->comments.html+显示管理评论功能
+@main_bp.route('/moderate')
+@login_required
+@permission_required(Permission.MODERATE)
+def moderate():
+    page = request.args.get('page', 1, type=int)
+    pagination = Comment.query.order_by(Comment.timestamp.desc()).\
+        paginate(page,per_page=current_app.config['FLASK_COMMENT_PER_PAGE'],
+                 error_out=False)
+    comments=pagination.items
+    return render_template('moderate.html', pagination=pagination, comments=comments, page=page)
+
+# 显示或隐藏评论
+@main_bp.route('/moderate/enable/<int:id>')
+@login_required
+@permission_required(Permission.MODERATE)
+def moderate_enable(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disabled = False
+    db.session.add(comment)
+    db.session.commit()
+    # 回到当前评论所处页
+    return redirect(url_for('.moderate', page=request.args.get('page', 1, type=int)))
+
+@main_bp.route('/moderate/disable/<int:id>')
+@login_required
+@permission_required(Permission.MODERATE)
+def moderate_disable(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disabled = True
+    db.session.add(comment)
+    db.session.commit()
+    # 回到当前评论所处页
+    return redirect(url_for('.moderate', page=request.args.get('page', 1, type=int)))

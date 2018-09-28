@@ -61,10 +61,15 @@ class EditProfileAdminForm(FlaskForm):
         if field.data != self.user.user_name and\
             User.query.filter_by(user_name=field.data).first():
             raise  ValidationError('此用户名已被注册')
-
+# blog 表单
 class PostForm(FlaskForm):
     
     # body = TextAreaField('what you want to say:', validators=[DataRequired()])
     # 使用PageDownField支持富文本
     body = PageDownField('有何高见', validators=[DataRequired()])
     submit = SubmitField('确认')
+
+# 评论 表单
+class CommentForm(FlaskForm):
+    body = StringField('Enter your comment', validators=[DataRequired()])
+    submit = SubmitField('提交')

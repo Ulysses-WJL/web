@@ -80,7 +80,9 @@ class User(UserMixin, db.Model):
     fans = db.relationship('Follow', foreign_keys=[Follow.idol_id],
                              backref=db.backref('idol', lazy='joined'),
                              lazy='dynamic', cascade='all, delete-orphan')
-
+    
+    comments = db.relationship('Comment', backref='author', lazy='dynamic')
+    
     # 赋予角色属性
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -336,6 +338,10 @@ class Post(db.Model):
     body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # agument : mapped class
+    # backref: indicates the string name of a property to be placed on the related mapper’s class
+    # that will handle this relationship in the other direction.
+    comments = db.relationship('Comment', backref='post', lazy='dynamic')
 
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
@@ -355,5 +361,29 @@ class Post(db.Model):
 # a string identifier which identifies the event to be intercepted
 db.event.listen(Post.body, 'set', Post.on_changed_body)
 
-
-
+#评论,与post类似
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # 管理员决定是否查禁
+    disabled = db.Column(db.Boolean, default=False)
+    
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tag = ['a', 'abbr', 'acronym', 'b', 'blockquote','code', 'em',
+                     'i', 'li', 'ol', 'pre', 'strong', 'ul', 'h1', 'h2',
+                     'h3', 'p']
+        # bleach.linkify: 将url字符串转为html<a>链接
+        # bleach.clean 清除html片段中的恶意内容，并返回，tags：允许存在的标签 strip：是否去除不允许的元素
+        # markdown 将markdown型式的字符串转为html, output_format :输出格式xhtml（默认）、html
+        target.body_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tag, strip=True))
+    
+    
+db.event.listen(Comment.body, 'set', Comment.on_changed_body)

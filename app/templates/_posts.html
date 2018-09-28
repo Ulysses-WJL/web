@@ -1,3 +1,4 @@
+<!--所有post单元显示-->
 <ul class="posts">
     {% for post in posts %}
     <li class="post">
@@ -18,9 +19,7 @@
               {% endif %}
             </div>
             <div class="post-footer">
-              <a href="{{ url_for('.post', id=post.id) }}">
-                <span class="label label-default ">链接</span>
-              </a>
+
               {% if current_user == post.author %}
                 <a href="{{ url_for('.edit_post', id=post.id) }}">
                   <span class="label label-primary ">修改</span>
@@ -30,7 +29,15 @@
                   <span class="label label-danger ">修改[Admin]</span>
                 </a>
               {% endif %}
-
+             <a href="{{ url_for('.post', id=post.id) }}">
+                <span class="label label-default ">链接</span>
+              </a>
+              <!--指向评论页，固定链接+URL后缀，指定加载页面后滚动条所在的初始位置-->
+              <a href="{{ url_for('.post', id=post.id) }}#comments">
+                <span class="label label-primary">
+                  {{ post.comments.count() }}评论
+                </span>
+              </a>
             </div>
         </div>
     </li>

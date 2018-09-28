@@ -26,9 +26,14 @@
         </div>
         <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
-                <li><a href="{{ url_for('main_bp.index') }}">主页</a></li>
+              <li><a href="{{ url_for('main_bp.index') }}">主页</a></li>
+              <li><a href="{{ url_for('main_bp.user',username=current_user.user_name) }}">个人信息</a></li>
             </ul>
+
             <ul class="nav navbar-nav navbar-right">
+                {% if current_user.can(Permission.MODERATE) %}
+                  <li><a href="{{ url_for('main_bp.moderate') }}">管理评论</a></li>
+                {% endif %}
                 {% if current_user.is_authenticated %}
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{ current_user.user_name }}<b class="caret"></b> </a>
@@ -36,7 +41,6 @@
                             <li><a href="{{ url_for('auth_bp.change_password') }}">修改密码</a></li>
                             <li><a href="{{ url_for('auth_bp.change_username') }}">修改用户名</a></li>
                             <li><a href="{{ url_for('auth_bp.change_email_request') }}">修改邮箱</a></li>
-                            <li><a href="{{ url_for('main_bp.user',username=current_user.user_name) }}">个人信息</a></li>
                             <li><a href="{{ url_for('auth_bp.logout') }}">退出</a></li>
                         </ul>
                     </li>
