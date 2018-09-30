@@ -39,11 +39,13 @@ def create_app(config_name):
     from .auth import auth_bp
     from .user import user_bp
     from .role import role_bp
+    from .api import api_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(role_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(api_bp, url_prefix='/api/v1')
     
     return app
 # app = Flask(__name__)
