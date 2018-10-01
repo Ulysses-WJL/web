@@ -32,3 +32,6 @@ def not_allowed(message):
 @api_bp.errorhandler(ValidationError)
 def validation_error(e):
     return bad_request(e.args[0])
+
+class ValidationError(ValueError):
+    pass

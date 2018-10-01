@@ -1,12 +1,13 @@
 import hashlib
 from app import db
-from flask import current_app,request
+from flask import current_app,request,url_for
 from flask_login import UserMixin, AnonymousUserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from datetime import datetime
 from markdown import markdown
+from .api.errors import ValidationError
 import bleach
 
 # 自定义的匿名用户
@@ -97,7 +98,19 @@ class User(UserMixin, db.Model):
         if self.email is not None and self.avatar_hash is None:
             self.avatar_hash = self.gravatar_hash()
         self.follow(self)
+    # user转化为json格式，提供给客户端，不需要所有数据
+    def to_json(self):
+        json_user = {
+            'url':url_for('api_bp.get_user', id=self.id),
+            'username': self.user_name,
+            'last_seen': self.last_seen,
+            'post_url': url_for('api_bp.get_user_posts', id=self.id),
+            'idol_post_url': url_for("api_bp.get_user_idol_post", id=self.id),
+            'post_count': self.posts.count()
+        }
+        return json_user
     
+
     # 新建用户时关注自己
     @staticmethod
     def add_self_follows():
@@ -154,6 +167,23 @@ class User(UserMixin, db.Model):
         db.session.add(self)
         return True
     
+    # 基于令牌的身份验证
+    def generate_auth_token(self, expiration=3600):
+        s = Serializer(current_app.config["SECRET_KEY"], expiration)
+        return s.dumps({'id':self.id}).decode('utf-8')
+    
+    # 验证用户
+    @staticmethod
+    def verify_auth_token(token):
+        s = Serializer(current_app.config["SECRET_KEY"])
+        try:
+            data = s.loads(token.encode('utf-8'))
+        except:
+            return False
+        return User.query.get(data['id'])
+    
+    
+    # 重置密码时发送给邮箱的验证
     def generate_password_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'reset': self.id}).decode("utf-8")
@@ -354,8 +384,26 @@ class Post(db.Model):
         target.body_html = bleach.linkify(bleach.clean(
             markdown(value, output_format='html'),
             tags=allowed_tag, strip=True))
-
-
+    # 将内部表示 转为json（http请求和响应的）格式：序列化
+    def to_json(self):
+        json_port = {
+            'url': url_for('api_bp.get_post', id=self.id),
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'comments_url': url_for('api_bp.get_post_comments', id=self.id),
+            'comment_count': self.comments.count(),
+            'author_url': url_for('api_bp.get_user', id=self.author_id)
+        }
+        return json_port
+    
+    @staticmethod
+    def from_json(json_post):
+        body = json_post.get('body')
+        if body is None or body == '':
+            raise ValidationError('post 没有内容')
+        return Post(body=body)
+        
 # “set”事件监听程序，在body字段设置新的值时，自动调用on_changed_body
 # sqlalchemy.event.listen(target, identifier, fn, *args, **kw)
 # a string identifier which identifies the event to be intercepted

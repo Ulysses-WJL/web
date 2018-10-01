@@ -73,7 +73,7 @@ def confirm(token):
     # 验证失败或成功，都回到主页面
     return redirect(url_for('main_bp.index'))
 
-
+# 针对应用全局请求的钩子，在auth_bp之外页能适应
 @auth_bp.before_app_request
 def before_request():
     """已登录，但账户未验证，请求的url不在身份验证蓝本中，
@@ -106,6 +106,14 @@ def resend_confirmation():
     return redirect('main_bp.index')
 
 
+# 相当于
+# def change_password():
+#     pass
+#
+# login_wrapped = login_required(change_password)
+# route_wrapped = auth_bp.route('/change-password',...)(login_wrapped)
+# /auth/change-password指向被login_required保护的视图函数
+# 反之则指向没有被保护的原始视图，login_required没有被调用
 @auth_bp.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
