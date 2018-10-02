@@ -45,7 +45,7 @@ def create_app(config_name):
     app.register_blueprint(role_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(auth_bp)
-    app.register_blueprint(api_bp, url_prefix='/api/v1')
+    app.register_blueprint(api_bp)
     
     return app
 # app = Flask(__name__)

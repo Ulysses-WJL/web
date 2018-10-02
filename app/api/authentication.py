@@ -33,7 +33,7 @@ def verify_password(email_or_token, password):
     g.token_used = False
     return user.verify_password(password)
 
-# 身份验证成功status_code 200， 错误401
+# 身份验证错误处理 成功status_code 200， 错误401
 @auth.error_handler
 def auth_error():
     return unauthorized('Invalid credentials')

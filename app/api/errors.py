@@ -29,6 +29,7 @@ def not_allowed(message):
     response.status_code = 405
     return response
 # 其余错误， 请求出错
+# 只要抛出了指定类的异常，就会调用被装饰的函数
 @api_bp.errorhandler(ValidationError)
 def validation_error(e):
     return bad_request(e.args[0])

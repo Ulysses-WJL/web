@@ -7,7 +7,7 @@ from . import login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from datetime import datetime
 from markdown import markdown
-from .api.errors import ValidationError
+from .exceptions import ValidationError
 import bleach
 
 # 自定义的匿名用户
@@ -368,10 +368,13 @@ class Post(db.Model):
     body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # 由User在Post添加author属性，代表作者
+    
     # agument : mapped class
     # backref: indicates the string name of a property to be placed on the related mapper’s class
     # that will handle this relationship in the other direction.
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
+    
 
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
@@ -409,6 +412,7 @@ class Post(db.Model):
 # a string identifier which identifies the event to be intercepted
 db.event.listen(Post.body, 'set', Post.on_changed_body)
 
+
 #评论,与post类似
 class Comment(db.Model):
     __tablename__ = 'comments'
@@ -420,6 +424,7 @@ class Comment(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     # 管理员决定是否查禁
     disabled = db.Column(db.Boolean, default=False)
+    # 根据User, Post 添加author 和 post属性
     
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
@@ -432,6 +437,24 @@ class Comment(db.Model):
         target.body_html = bleach.linkify(bleach.clean(
             markdown(value, output_format='html'),
             tags=allowed_tag, strip=True))
-    
+
+    # 将内部表示 转为json（http请求和响应的）格式：序列化
+    def to_json(self):
+        json_comment = {
+            'url': url_for('api_bp.get_comments', id=self.id),
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'post_id':  url_for('api_bp.get_post', id=self.post_id),
+            'author_url': url_for('api_bp.get_user', id=self.author_id),
+        }
+        return json_comment
+
+    @staticmethod
+    def from_json(json_comment):
+        body = json_comment.get('body')
+        if body is None or body == '':
+            raise ValidationError('comments 没有内容')
+        return Comment(body=body)
     
 db.event.listen(Comment.body, 'set', Comment.on_changed_body)
