@@ -12,7 +12,7 @@ manager.add_command('db', MigrateCommand) #在终端环境下添加一个db命�
 COV = None
 if os.environ.get('COVERAGE'):
     import coverage
-    COV=coverage.coverage(branch=True,include='*')
+    COV=coverage.coverage(branch=True,include='app/*')
     COV.start()
     print('Start measuring code coverage')
     

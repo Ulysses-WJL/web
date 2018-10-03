@@ -239,3 +239,14 @@ class UserModelTest(unittest.TestCase):
         db.session.delete(u2)
         db.session.commit()
         self.assertTrue(Follow.query.count() == 1)
+    
+    def test_to_json(self):
+        u = User(email='to_json@example.com', password='123')
+        db.session.add(u)
+        db.session.commit()
+        with self.app.test_request_context('/'):
+            json_user = u.to_json()
+        expected_keys = ['url', 'username', 'last_seen',
+                             'post_url', 'idol_post_url', 'post_count']
+        self.assertTrue(sorted(json_user.keys()), sorted(expected_keys))
+        self.assertTrue('api/v1/users/'+str(u.id), json_user['url'])
