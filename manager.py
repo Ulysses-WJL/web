@@ -1,4 +1,5 @@
 import os
+import sys
 from flask_migrate import Migrate, MigrateCommand #载入migrate扩展
 from app import db
 from flask_script import Manager, Shell
@@ -20,8 +21,11 @@ if os.environ.get('COVERAGE'):
 def test(coverage=False):
     """Run the unittests"""
     if coverage and not os.environ.get('COVERAGE'):
-        import sys
         os.environ['COVERAGE']='1'
+        # 重启脚本，设置了FLASK_COVERAGE，启动覆盖检测
+        print('Reset')
+        # .executable:python可执行文件路径
+        # 执行可执行文件
         os.execvp(sys.executable,[sys.executable]+sys.argv)
     import unittest
     tests = unittest.TestLoader().discover('test')

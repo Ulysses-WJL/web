@@ -27,7 +27,12 @@ def test(coverage):
     if coverage and not os.environ.get("FLASK_COVERAGE"):
         os.environ['FLASK_COVERAGE'] = '1'
         # 重启脚本，设置了FLASK_COVERAGE，启动覆盖检测
+        print('Reset')
+        # .executable:python可执行文件路径
+        # 执行可执行文件
         os.execvp(sys.executable, [sys.executable]+sys.argv)
+    print(f'Executable file:{sys.executable}\n'
+          f'args:{sys.argv}')
     import unittest
     tests = unittest.TestLoader().discover('test')
     unittest.TextTestRunner(verbosity=2).run(tests)
@@ -35,6 +40,9 @@ def test(coverage):
         COV.stop()
         COV.save()
         COV.report()
+        # basedir = os.path.abspath(os.path.dirname(__file__))
+        # covdir = os.path.join(basedir, 'COV-html')
         COV.html_report(directory='COV-html')
+        # print(f"HTML version: file://{covdir}/index.html")
         COV.erase()
     

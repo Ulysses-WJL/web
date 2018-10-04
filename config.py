@@ -5,7 +5,8 @@
 import os
 from user_setting import *
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KKEY') or 'you never guss'
+    # 防止CSRF攻击， Flask-WTF为所有表单生成安全令牌，根据秘钥生成
+    SECRET_KEY = os.environ.get('SECRET_KKEY') or 'you never guess'
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.qq.com'
     MAIL_PORT = os.environ.get('MAIL_PORT') or 465
     MAIL_USE_TLS = False
@@ -34,6 +35,8 @@ class DevelopmentConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     DBNAME = 'sql_test'
+    #  测试时关闭CSRF保护，不处理令牌
+    WTF_CSRF_ENABLE = False
     URL =  f'mysql+pymysql://{root}:{passwd}@localhost:3306/sql_test'
     SQLALCHEMY_DATABASE_URI = URL
 
