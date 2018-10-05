@@ -36,7 +36,7 @@ class TestingConfig(Config):
     TESTING = True
     DBNAME = 'sql_test'
     #  测试时关闭CSRF保护，不处理令牌
-    WTF_CSRF_ENABLE = False
+    WTF_CSRF_ENABLED = False
     URL =  f'mysql+pymysql://{root}:{passwd}@localhost:3306/sql_test'
     SQLALCHEMY_DATABASE_URI = URL
 
