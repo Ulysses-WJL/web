@@ -25,7 +25,7 @@ def verify_password(email_or_token, password):
         g.token_used = True
         return g.current_user is not None
     # 通过邮箱-密码进行身份验证
-    user = User.query.filter_by(email = email_or_token).first()
+    user = User.query.filter_by(email=email_or_token).first()
     if not user:
         return False
     # 获取user后，保存在Flask上下文变量g（保存每个请求要用到的请求内的全局变量）中
@@ -43,9 +43,9 @@ def auth_error():
 @api_bp.before_request
 @auth.login_required
 def before_request():
-    if not g.current_user.is_anonymous and\
-        not g.current_user.confirmed:
-        return forbidden('Unconfirmed Account')
+    if not g.current_user.is_anonymous and \
+            not g.current_user.confirmed:
+        return forbidden('Unconfirmed account')
 
 # 请求生成身份验证令牌
 @api_bp.route('/tokens/', methods=['POST'])
@@ -53,6 +53,7 @@ def get_token():
     # 必须要使用邮箱-密码进行验证，而不是旧令牌
     if g.current_user.is_anonymous or g.token_used:
         unauthorized('Invalid credentials')
-    return jsonify({'token':g.current_user.generate_auth_token(), 'expiration':'default 3600s'})
+    return jsonify({'token':g.current_user.generate_auth_token(
+        expiration=3600), 'expiration':3600})
 
 

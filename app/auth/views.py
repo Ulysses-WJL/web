@@ -57,7 +57,7 @@ def register():
     return render_template('auth/register.html', form=form)
 
 # 用户点击验证链接后的处理函数
-# 受保护的路由，需要登录
+# 受保护的路由，需要先登录
 @auth_bp.route('/confirm/<token>')
 @login_required
 def confirm(token):

@@ -1,7 +1,7 @@
 from . import api_bp
 from ..models import Post, Permission, Comment
 from flask import jsonify,request,g, url_for,current_app
-from ..decorators import permission_required
+from .decorators import permission_required
 from .. import db
 from .errors import forbidden
 # 获取posts列表， GET请求
@@ -28,8 +28,10 @@ def get_posts():
 # 获取某一篇post
 @api_bp.route('/posts/<int:id>')
 def get_post(id):
+    
     post = Post.query.get_or_404(id)
-    return jsonify({'post':post.to_json()})
+    # 直接返回 {"url":， "body":}
+    return jsonify(post.to_json())
 
 # 生成一份新的post， POST方式
 @api_bp.route('/posts/', methods=['POST'])
@@ -50,8 +52,8 @@ def new_post():
 def edit_post(id):
     post = Post.query.get_or_404(id)
     if g.current_user != post.author and\
-        not g.current_user.can(Permission.WRITE):
-            return forbidden('has no right')
+        not g.current_user.can(Permission.ADMIN):
+        return forbidden('has no right')
     # 根据 请求中的信息 修改body
     post.body = request.json.get('body', post.body)
     db.session.add(post)

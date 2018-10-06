@@ -168,7 +168,7 @@ class User(UserMixin, db.Model):
         return True
     
     # 基于令牌的身份验证
-    def generate_auth_token(self, expiration=3600):
+    def generate_auth_token(self, expiration):
         s = Serializer(current_app.config["SECRET_KEY"], expiration)
         return s.dumps({'id':self.id}).decode('utf-8')
     
@@ -179,7 +179,7 @@ class User(UserMixin, db.Model):
         try:
             data = s.loads(token.encode('utf-8'))
         except:
-            return False
+            return None
         return User.query.get(data['id'])
     
     

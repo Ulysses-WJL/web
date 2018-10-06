@@ -27,7 +27,7 @@ class FlaskClientTestCase(unittest.TestCase):
         """测试首页"""
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        # get_data 返回字节数组， 转为字符串格式
+        # get_data 返回字节数组， 转为字符串格式 decoded unicode string
         self.assertTrue("Stranger" in response.get_data(as_text=True))
     
     def test_register_login_out(self):
@@ -45,11 +45,16 @@ class FlaskClientTestCase(unittest.TestCase):
         
         self.assertEqual(200, response.status_code)
         self.assertTrue(re.search('Hello,\s+register', response.get_data(as_text=True)))
-        
+        # 生成验证邮箱需要的token
         user = User.query.filter_by(email='register@test.com').first()
         token = user.generate_confirmation_token()
+        # 请求验证
         response = self.client.get(f'/auth/confirm/{token}', follow_redirects=True)
         user.confirm(token)
-        
+        # 重定向后返回index页面
         self.assertEqual(200, response.status_code)
-        
+        self.assertTrue('验证成功' in response.get_data(as_text=True))
+        # 退出
+        response = self.client.get('/auth/logout', follow_redirects=True)
+        self.assertEqual(200, response.status_code)
+        self.assertTrue('已退出' in response.get_data(as_text=True))
