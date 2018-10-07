@@ -313,3 +313,17 @@ def moderate_disable(id):
     db.session.commit()
     # 回到当前评论所处页
     return redirect(url_for('.moderate', page=request.args.get('page', 1, type=int)))
+
+@main_bp.route('/shutdown')
+def server_shutdown():
+    """关闭服务器"""
+    # 只在测试时使用这个路由
+    if not current_app.testing:
+        abort(404)
+    # 获取Werkzeug对环境开发的关闭函数
+    shutdown = request.environ.get('werkzeug.server.shutdown')
+    if not shutdown:
+        abort(500)
+    shutdown()
+    return 'Shuting down'
+    

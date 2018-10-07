@@ -8,15 +8,15 @@ def get_user(id):
     user = User.query.get_or_404(id)
     return jsonify(user.to_json())
 
-@api_bp.route('/users/<int:id>/posts')
+@api_bp.route('/users/<int:id>/posts/')
 def get_user_posts(id):
     user = User.query.get_or_404(id)
     page = request.args.get('page', 1, type=int)
-    pagination = user.comments.order_by(Post.timestamp.desc()).paginate(
+    pagination = user.posts.order_by(Post.timestamp.desc()).paginate(
         page=page, per_page=current_app.config['FLASK_POSTS_PER_PAGE'], error_out=False)
     posts = pagination.items
     prev = None
-    if pagination.has_pre:
+    if pagination.has_prev:
         prev = url_for('api_bp.get_user_posts', id=id, page=page-1)
     next = None
     if pagination.has_next:
@@ -27,7 +27,7 @@ def get_user_posts(id):
                     'posts_count':pagination.total})
 
 # 获取用户所关注对象的所有post
-@api_bp.route('/user/<int:id>/timeline')
+@api_bp.route('/users/<int:id>/timeline/')
 def get_user_idol_post(id):
     user = User.query.get_or_404(id)
     page = request.args.get('page', 1, type=int)
@@ -35,7 +35,7 @@ def get_user_idol_post(id):
         page=page, per_page=current_app.config['FLASK_POSTS_PER_PAGE'], error_out=False)
     posts = pagination.items
     prev = None
-    if pagination.has_pre:
+    if pagination.has_prev:
         prev = url_for('api_bp.get_user_posts', id=id, page=page-1)
     next = None
     if pagination.has_next:
@@ -43,4 +43,4 @@ def get_user_idol_post(id):
     return jsonify({'posts': [post.to_json() for post in posts],
                     'prev':prev,
                     'next':next,
-                    'post_count': pagination.total})
+                    'posts_count': pagination.total})

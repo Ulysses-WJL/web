@@ -441,7 +441,7 @@ class Comment(db.Model):
     # 将内部表示 转为json（http请求和响应的）格式：序列化
     def to_json(self):
         json_comment = {
-            'url': url_for('api_bp.get_comments', id=self.id),
+            'url': url_for('api_bp.get_comment', id=self.id),
             'body': self.body,
             'body_html': self.body_html,
             'timestamp': self.timestamp,
