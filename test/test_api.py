@@ -209,7 +209,7 @@ class APITestCase(unittest.TestCase):
         r = Role.query.filter_by(name='User').first()
         self.assertIsNotNone(r)
         u1 = User(role=r, user_name='test_comment1', confirmed=True,
-                 email='test_comment1@test.com', password='123')
+                 email='test_comment1@test.com', tpassword='123')
         u2 = User(role=r, user_name='test_comment2', confirmed=True,
                  email='test_comment2@test.com', password='123')
         db.session.add_all([u1, u2])
