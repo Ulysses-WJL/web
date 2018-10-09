@@ -6,6 +6,7 @@ from flask_mail import Mail
 from config import config
 from flask_login import LoginManager
 from flask_pagedown import PageDown
+import logging
 # import pymysql
 
 
@@ -23,10 +24,12 @@ login_manager.login_view = 'auth_bp.login'
 # 使用PageDownField之前要初始化扩展
 pagedown = PageDown()
 
+
 def create_app(config_name):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
+
     
     bootstrap.init_app(app)
     mail.init_app(app)

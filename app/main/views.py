@@ -11,6 +11,7 @@ import logging
 from flask_login import login_required, current_user
 from ..decorators import admin_required,permission_required
 from ..models import Role, User, Comment
+from flask_sqlalchemy import get_debug_queries
 logging.basicConfig(format="%(asctime)s%(message)s", level=logging.INFO)
 
 
@@ -326,4 +327,12 @@ def server_shutdown():
         abort(500)
     shutdown()
     return 'Shutting down...'
-    
+
+# 每次请求之后执行，在main之外的请求也可执行
+@main_bp.after_app_request
+def after_request(response):
+    for query in get_debug_queries():
+        if query.duration >= current_app.config['FLASK_SLOW_DB_QUERY_TIME']:
+            current_app.logger.warning(f'Slow query:{query.statement}\nParameters:{query.parameters}\n'
+                                       f'Duration:{query.duration}\nContent:{query.context}\n')
+    return response

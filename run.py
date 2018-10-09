@@ -46,3 +46,15 @@ def test(coverage):
         # print(f"HTML version: file://{covdir}/index.html")
         COV.erase()
     
+@app.cli.command()
+@click.option('--length', default=25,
+              help='function slow')
+@click.option('--profile-dir', default=None,
+              help='direction')
+def profile(length, profile_dir):
+    """在分析器的监视下启动web服务器，分析函数运行时间"""
+    from werkzeug.contrib.profiler import ProfilerMiddleware
+    # wsgi application 真正的服务器网关接口 应用
+    # app.wsgi_app = MyMiddleware(app.wsgi_app)中间件可以在不丢失应用对象的情况下应用
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length], profile_dir=profile_dir)
+    app.run(debug=False)
