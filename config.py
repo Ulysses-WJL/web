@@ -30,7 +30,8 @@ class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
     DBNAME = 'sql_hello'
-    URL = f'mysql+pymysql://{root}:{passwd}@localhost:3306/{DBNAME}'
+    DBHOST = os.environ.get('DBHOST') or 'localhost'
+    URL = f'mysql+pymysql://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
     SQLALCHEMY_DATABASE_URI = URL
     
 class TestingConfig(Config):
@@ -38,12 +39,50 @@ class TestingConfig(Config):
     DBNAME = 'sql_test'
     #  测试时关闭CSRF保护，不处理令牌
     WTF_CSRF_ENABLED = False
-    URL =  f'mysql+pymysql://{root}:{passwd}@localhost:3306/sql_test'
+    DBHOST = os.environ.get('DBHOST') or 'localhost'
+    URL =  f'mysql+pymysql://{root}:{passwd}@{DBHOST}:3306/sql_test'
     SQLALCHEMY_DATABASE_URI = URL
 
-
+class ProductioanConfig(Config):
+    DEBUG = False
+    TESTING = False
+    DBNAME = 'sql_product'
+    DBHOST = os.environ.get('DBHOST') or 'localhost'
+    URL = f'mysql+pymysql://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
+    SQLALCHEMY_DATABASE_URI = URL
+    
+    @classmethod
+    def init_app(cls, app):
+        Config.init_app(app)
+        
+        import logging
+        from logging.handlers import SMTPHandler
+        credentials = None
+        secure = None
+        if getattr(cls, 'MAIL_USERNAME', None) is not None:
+            credentials = (cls.MAIL_USERNAME, cls.MAIL_PASSWORD)
+            if getattr(cls, 'MAIL_USE_TLS', None):
+                secure = ()
+        # 将错误日志以邮件的方式发送给管理员
+        mail_handler = SMTPHandler(
+            # isinstance(mailhost, (list, tuple)):
+            mailhost=(cls.MAIL_SERVER, cls.MAIL_PORT),
+            fromaddr=cls.FLASKY_MAIL_SENDER,
+            #         if isinstance(toaddrs, str):
+            #             toaddrs = [toaddrs]
+            #         self.toaddrs = toaddrs
+            toaddrs=[cls.FLASK_ADMIN],
+            subject=cls.FLASKY_MAIL_SUBJECT_PREFIX + "Application Error",
+            credentials=credentials,
+            secure=secure)
+        #  Set the logging level of this handler.  level must be an int or a str.
+        mail_handler.setLevel(logging.ERROR)
+        # Add the specified handler to this logger.
+        app.logger.addHandler(mail_handler)
+    
 config = {
     'development': DevelopmentConfig,
     'default': DevelopmentConfig,
-    'testing': TestingConfig
+    'testing': TestingConfig,
+    'production': ProductioanConfig
 }
