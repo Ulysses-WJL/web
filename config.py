@@ -4,6 +4,10 @@
 #设置这一项是每次请求结束后都会自动提交数据库中的变动
 import os
 # from user_setting import *
+root = 'root'
+passwd = '62300313'
+
+
 class Config:
     # 防止CSRF攻击， Flask-WTF为所有表单生成安全令牌，根据秘钥生成
     SECRET_KEY = os.environ.get('SECRET_KKEY') or 'you never guess'
@@ -23,8 +27,6 @@ class Config:
     SQLALCHEMY_RECORD_QUERIES = True
     FLASK_SLOW_DB_QUERY_TIME = 0.5
     SSL_REDIRECT = False
-    root = 'root'
-    passwd = '62300313'
     @staticmethod
     def init_app(app):
         pass
@@ -90,7 +92,7 @@ class HerokuConfig(ProductioanConfig):
     DBNAME = 'sql_product'
     DBHOST = os.environ.get('DBHOST') or 'localhost'
     URL = f'psycopg2://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
-    SQLALCHEMY_DATABASE_URI = URL
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DBTABASE_URL') or URL
     SSL_REDIRECT = True if os.environ.get('DYNO') else False
     @classmethod
     def init_app(cls, app):
