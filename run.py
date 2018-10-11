@@ -64,6 +64,7 @@ def profile(length, profile_dir):
 def deploy():
     """安装升级"""
     # 数据库迁移到最新版本
+    # Upgrade to a later version
     upgrade()
     
     # 添加3中角色

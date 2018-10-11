@@ -24,7 +24,7 @@ class Config:
     FLASK_SLOW_DB_QUERY_TIME = 0.5
     SSL_REDIRECT = False
     root = 'root'
-    password = '62300313'
+    passwd = '62300313'
     @staticmethod
     def init_app(app):
         pass
@@ -86,6 +86,11 @@ class ProductioanConfig(Config):
 # heroku 类的配置
 class HerokuConfig(ProductioanConfig):
     """Heroku将应用写入stdout和stderr的输出视为日志"""
+    # 使用psycopg2连接Postgres数据库
+    DBNAME = 'sql_product'
+    DBHOST = os.environ.get('DBHOST') or 'localhost'
+    URL = f'psycopg2://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
+    SQLALCHEMY_DATABASE_URI = URL
     SSL_REDIRECT = True if os.environ.get('DYNO') else False
     @classmethod
     def init_app(cls, app):
