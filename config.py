@@ -91,7 +91,7 @@ class HerokuConfig(ProductioanConfig):
     # 使用psycopg2连接Postgres数据库
     DBNAME = 'sql_product'
     DBHOST = os.environ.get('DBHOST') or 'localhost'
-    URL = f'psycopg2://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
+    URL = f'mysql+pymysql://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DBTABASE_URL') or URL
     SSL_REDIRECT = True if os.environ.get('DYNO') else False
     @classmethod

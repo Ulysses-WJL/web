@@ -39,6 +39,18 @@ def test(coverage=False):
         COV.html_report(directory='COV-html')
         COV.erase()
 
+@manager.command
+def init_data():
+    db.create_all()
+    Role.insert_roles()
+    u1 = User(role='User', confirmed=True, email='user@test.com',
+                  password='123', user_name='user1')
+    u2 = User(role='Moderate', confirmed=True, email='user@test.com',
+              password='123', user_name='user1')
+    u3 = User(role='Administrator', confirmed=True, email='user@test.com',
+              password='123', user_name='user1')
+    db.session.add_all([u1, u2, u3])
+    db.session.commit()
 
 @manager.command
 def deploy():
