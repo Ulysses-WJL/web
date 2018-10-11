@@ -29,7 +29,7 @@ def create_app(config_name):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
-
+    
     
     bootstrap.init_app(app)
     mail.init_app(app)
@@ -37,6 +37,12 @@ def create_app(config_name):
     db.init_app(app)
     login_manager.init_app(app)
     pagedown.init_app(app)
+    
+    # 保护app 所有请求重定向到http安全协议  https://
+    if app.config['SSL_REDIRECT']:
+        from flask_sslify import SSLify
+        sslify = SSLify(app)
+    
     # 在应用中注册该蓝图
     from .main import main_bp
     from .auth import auth_bp

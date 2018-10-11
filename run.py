@@ -3,7 +3,7 @@ import click
 import sys
 from app import create_app, db
 from app.models import User, Role,Post, Follow, Permission
-from flask_migrate import Migrate, MigrateCommand
+from flask_migrate import Migrate, MigrateCommand, upgrade
 from flask_script import Manager
 #app = create_app(os.environ.get('FLASK_CONFIG') or 'default')
 app = create_app('default')
@@ -58,3 +58,16 @@ def profile(length, profile_dir):
     # app.wsgi_app = MyMiddleware(app.wsgi_app)中间件可以在不丢失应用对象的情况下应用
     app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length], profile_dir=profile_dir)
     app.run(debug=False)
+
+
+@app.cli.command()
+def deploy():
+    """安装升级"""
+    # 数据库迁移到最新版本
+    upgrade()
+    
+    # 添加3中角色
+    Role.insert_roles()
+    
+    # 每个用户都关注自己
+    User.add_self_follows()

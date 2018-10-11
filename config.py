@@ -22,6 +22,9 @@ class Config:
     FLASK_COMMENT_PER_PAGE = 10
     SQLALCHEMY_RECORD_QUERIES = True
     FLASK_SLOW_DB_QUERY_TIME = 0.5
+    SSL_REDIRECT = False
+    root = 'root'
+    password = '62300313'
     @staticmethod
     def init_app(app):
         pass
@@ -80,9 +83,34 @@ class ProductioanConfig(Config):
         # Add the specified handler to this logger.
         app.logger.addHandler(mail_handler)
     
+# heroku 类的配置
+class HerokuConfig(ProductioanConfig):
+    """Heroku将应用写入stdout和stderr的输出视为日志"""
+    SSL_REDIRECT = True if os.environ.get('DYNO') else False
+    @classmethod
+    def init_app(cls, app):
+        ProductioanConfig.init_app(app)
+        
+        # 检查client->reverse proxy的请求的首部，是否加密request.is_secure
+        # 处理reverse proxy -> Web应用 设定的首部
+        # 使用ProxyFix中间件
+        from werkzeug.contrib.fixers import ProxyFix
+        # add HTTP proxy support to an
+        #  application that was not designed with HTTP proxies in mind
+        app.wsgi_app = ProxyFix(app.wsgi_app)
+        
+        import logging
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        
+
+
 config = {
     'development': DevelopmentConfig,
     'default': DevelopmentConfig,
     'testing': TestingConfig,
-    'production': ProductioanConfig
+    'production': ProductioanConfig,
+    'heroku':HerokuConfig
 }
