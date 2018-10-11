@@ -43,12 +43,12 @@ def test(coverage=False):
 def init_data():
     db.create_all()
     Role.insert_roles()
-    u1 = User(role='User', confirmed=True, email='user@test.com',
+    u1 = User(role='User', confirmed=True, email='user1@test.com',
                   password='123', user_name='user1')
-    u2 = User(role='Moderate', confirmed=True, email='user@test.com',
-              password='123', user_name='user1')
-    u3 = User(role='Administrator', confirmed=True, email='user@test.com',
-              password='123', user_name='user1')
+    u2 = User(role='Moderate', confirmed=True, email='user2@test.com',
+              password='123', user_name='user2')
+    u3 = User(role='Administrator', confirmed=True, email='user3@test.com',
+              password='123', user_name='user3')
     db.session.add_all([u1, u2, u3])
     db.session.commit()
 
