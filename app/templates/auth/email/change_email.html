@@ -1,0 +1,7 @@
+<p>{{ user.user_name }}， 你好</p>
+<p>欢迎来到 <b>Flasky</b>!</p>  <!-- 生成绝对url，包含https:// 主机名、端口-->
+<p>您的邮箱已进行修改，请<a href="{{ url_for('auth_bp.change_email_confirm', token=token, _external=True) }}">点击</a>进行验证</p>
+<p>或者，您可以在浏览器被输入以下内容：</p>
+<p>{{ url_for('auth_bp.change_email_confirm', token=token, _external=True) }}</p>
+<p>The Flasky Team</p>
+<p><small>请勿回复此邮件</small></p>

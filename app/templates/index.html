@@ -1,19 +1,45 @@
 {% extends 'base.html' %}
 {% import "bootstrap/wtf.html" as wtf %}
+{% import '_macros.html' as macros %}
 {% block title %}Index{% endblock %}
 
 {% block page_content %}
 <div class="page-header">
-    <h1>导航</h1>
-   <p>当地时间: {{moment(current_time).format('LLLL')}}</p>
-    <!-- fromNow()渲染相对时间，会随时间推移而自动刷新显示-->
-    <p>That was {{ moment(current_time).fromNow(refresh=True) }}</p>
-    <h1>Hello, {% if name %}{{ name }}{% else %}Stranger{% endif %}</h1>
-    {% if not know %}
-    <p>Pleased to meet yuu !</p>
-    {% else %}
-    <p>Happy to see you again!</p>
+    <h1>Hello,
+        {% if current_user.is_authenticated %}
+            {{ current_user.user_name }}
+        {% else %}
+            Stranger
+        {% endif %}!
+    </h1>
+</div>
+<div>
+    {% if current_user.can(Permission.WRITE) %}
+    {{ wtf.quick_form(form) }}
     {% endif %}
 </div>
-{{ wtf.quick_form(form) }}
+<div class="post-tabs">
+  <ul class="nav nav-tabs">
+    <!--show_followed为False，显示所有posts'-->
+    <li{% if not show_followed %} class="active"{% endif %}><a href="
+      {{ url_for('.show_all') }}">All</a>
+    </li>
+    {% if current_user.is_authenticated %}
+      <!--show_followed为True，显示当前用户关注对象的posts'-->
+      <li{% if show_followed %} class="active"{% endif %}><a href="{{ url_for('.show_followed') }}">Followed</a>
+      </li>
+    {% endif %}
+  </ul>
+  {% include "_posts.html" %}
+</div>
+{% if pagination %}
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, '.index') }}
+</div>
+{% endif %}
+{% endblock %}
+<!--markdown 预览-->
+{% block scripts %}
+{{ super() }}
+{{ pagedown.include_pagedown() }}
 {% endblock %}

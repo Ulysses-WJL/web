@@ -1,6 +1,0 @@
-qqmail_user = '2276777056@qq.com'
-qqmail_passwd = 'qsujljaowikpeahd'
-gmail_user = 'jianliangwu1171@gmail.com'
-gmail_passwd = '62300313.a'
-root = 'root'
-passwd = '62300313'

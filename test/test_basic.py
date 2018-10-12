@@ -19,4 +19,5 @@ class BasicTestCase(unittest.TestCase):
         self.assertFalse(current_app is None)
     
     def test_app_is_testing(self):
+        print(f"db:{current_app.config['URL']}")
         self.assertTrue(current_app.config['TESTING'])
