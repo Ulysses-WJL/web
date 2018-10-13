@@ -33,6 +33,14 @@ class Config:
     def init_app(app):
         pass
 
+class PostgreConfig(Config):
+    DEBUG = True
+    TESTING = False
+    DBNAME = 'postgre_sql'
+    DBHOST = os.environ.get('DBHOST') or 'localhost'
+    USERNAME = 'dbuser'
+    URL = f'postgresql://{USERNAME}:{passwd}@127.0.0.1:5432/{DBNAME}'
+    SQLALCHEMY_DATABASE_URI = URL
 
 #   开发环境
 class DevelopmentConfig(Config):
@@ -96,10 +104,13 @@ class ProductioanConfig(Config):
 class HerokuConfig(ProductioanConfig):
     """Heroku将应用写入stdout和stderr的输出视为日志"""
     # 使用psycopg2连接Postgres数据库
-    DBNAME = 'sql_product'
+    DEBUG = True
+    TESTING = False
+    DBNAME = 'postgre_sql'
     DBHOST = os.environ.get('DBHOST') or 'localhost'
-    URL = f'mysql+pymysql://{root}:{passwd}@{DBHOST}:3306/{DBNAME}'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DBTABASE_URL') or URL
+    USERNAME = 'dbuser'
+    URL = f'postgresql://{USERNAME}:{passwd}@127.0.0.1:5432/{DBNAME}'
+    SQLALCHEMY_DATABASE_URI = URL
     SSL_REDIRECT = True if os.environ.get('DYNO') else False
 
     @classmethod
@@ -127,4 +138,5 @@ config = {
     'testing': TestingConfig,
     'production': ProductioanConfig,
     'heroku': HerokuConfig,
+    'postgre':PostgreConfig
 }
