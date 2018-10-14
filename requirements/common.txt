@@ -33,7 +33,6 @@ Jinja2==2.10
 Mako==1.0.7
 Markdown==3.0
 MarkupSafe==1.0
-psycopg2-binary==2.7.5
 pycparser==2.18
 Pygments==2.2.0
 PyMySQL==0.9.2
