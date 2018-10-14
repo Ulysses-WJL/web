@@ -7,7 +7,6 @@ from config import config
 from flask_login import LoginManager
 from flask_pagedown import PageDown
 import logging
-import psycopg2
 
 
 bootstrap = Bootstrap()
