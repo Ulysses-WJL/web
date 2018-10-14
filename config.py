@@ -110,7 +110,7 @@ class HerokuConfig(ProductioanConfig):
     DBHOST = os.environ.get('DBHOST') or 'localhost'
     USERNAME = 'dbuser'
     URL = f'postgresql://{USERNAME}:{passwd}@127.0.0.1:5432/{DBNAME}'
-    SQLALCHEMY_DATABASE_URI = URL
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or URL
     SSL_REDIRECT = True if os.environ.get('DYNO') else False
 
     @classmethod
