@@ -132,11 +132,29 @@ class HerokuConfig(ProductioanConfig):
         app.logger.addHandler(file_handler)
 
 
+class DockerConfig(ProductioanConfig):
+    DBNAME = 'postgre_sql'
+    DBHOST = os.environ.get('DBHOST') or 'localhost'
+    USERNAME = 'dbuser'
+    URL = f'postgresql://{USERNAME}:{passwd}@127.0.0.1:5432/{DBNAME}'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or URL
+    @classmethod
+    def init_app(cls, app):
+        ProductioanConfig.init_app(app)
+
+        # 将日志输出到stderr, Docker自动捕捉， docker logs输出
+        import logging
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+
 config = {
     'development': DevelopmentConfig,
     'default': DevelopmentConfig,
     'testing': TestingConfig,
     'production': ProductioanConfig,
     'heroku': HerokuConfig,
-    'postgre':PostgreConfig
+    'postgre':PostgreConfig,
+    'docker':DockerConfig
 }
